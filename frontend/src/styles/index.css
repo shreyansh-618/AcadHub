@@ -1,0 +1,197 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dark theme and glassmorphism */
+:root {
+  --primary: 59, 130, 246;
+  --secondary: 168, 85, 247;
+  --dark-bg: 15, 23, 42;
+  --dark-card: 30, 41, 59;
+  --dark-border: 71, 85, 105;
+}
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply antialiased text-slate-100 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950;
+    background-attachment: fixed;
+  }
+
+  a {
+    @apply text-blue-400 hover:text-blue-300 transition-colors duration-200;
+  }
+
+  button {
+    @apply font-medium transition-all duration-200;
+  }
+
+  input,
+  textarea,
+  select {
+    @apply bg-opacity-10 text-slate-100;
+  }
+}
+
+/* Glassmorphism effects */
+@layer components {
+  .glass {
+    @apply bg-white bg-opacity-10 backdrop-blur-xl border border-white border-opacity-20 rounded-2xl;
+  }
+
+  .glass-sm {
+    @apply bg-slate-800 bg-opacity-40 backdrop-blur-lg border border-slate-700 border-opacity-30 rounded-xl;
+  }
+
+  .glass-lg {
+    @apply bg-slate-800 bg-opacity-50 backdrop-blur-2xl border border-slate-600 border-opacity-30 rounded-3xl;
+  }
+
+  /* Button styles */
+  .btn-primary {
+    @apply px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-blue-500/50;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-purple-500/50;
+  }
+
+  .btn-ghost {
+    @apply px-6 py-3 text-slate-200 hover:text-white rounded-xl font-semibold hover:bg-white hover:bg-opacity-10 transition-all duration-200 border border-slate-600 border-opacity-30 hover:border-opacity-50;
+  }
+
+  .btn-outline {
+    @apply px-6 py-3 border-2 border-blue-400 text-blue-400 rounded-xl font-semibold hover:bg-blue-400 hover:text-slate-950 transition-all duration-200;
+  }
+
+  /* Card styles */
+  .card {
+    @apply glass p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105;
+  }
+
+  .card-lg {
+    @apply glass-lg p-8 hover:shadow-2xl transition-all duration-300;
+  }
+
+  .card-interactive {
+    @apply glass p-6 cursor-pointer hover:bg-white hover:bg-opacity-15 hover:border-opacity-50 transition-all duration-300;
+  }
+
+  /* Form inputs */
+  .input-field {
+    @apply w-full px-4 py-3 bg-slate-800 bg-opacity-50 border border-slate-600 border-opacity-30 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-200;
+  }
+
+  .input-field:focus {
+    @apply bg-slate-700 bg-opacity-60 border-blue-400 border-opacity-50;
+  }
+
+  .textarea-field {
+    @apply w-full px-4 py-3 bg-slate-800 bg-opacity-50 border border-slate-600 border-opacity-30 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-200 resize-none;
+  }
+
+  .textarea-field:focus {
+    @apply bg-slate-700 bg-opacity-60 border-blue-400 border-opacity-50;
+  }
+
+  /* Badge styles */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-slate-700 bg-opacity-50 text-slate-200 border border-slate-600 border-opacity-30;
+  }
+
+  .badge-primary {
+    @apply bg-blue-500 bg-opacity-30 text-blue-300 border-blue-400 border-opacity-30;
+  }
+
+  .badge-secondary {
+    @apply bg-purple-500 bg-opacity-30 text-purple-300 border-purple-400 border-opacity-30;
+  }
+
+  .badge-success {
+    @apply bg-green-500 bg-opacity-30 text-green-300 border-green-400 border-opacity-30;
+  }
+
+  .badge-warning {
+    @apply bg-yellow-500 bg-opacity-30 text-yellow-300 border-yellow-400 border-opacity-30;
+  }
+
+  .badge-danger {
+    @apply bg-red-500 bg-opacity-30 text-red-300 border-red-400 border-opacity-30;
+  }
+
+  /* Container utility */
+  .container-max {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent;
+  }
+
+  /* Shimmer effect for loading */
+  .shimmer {
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+
+  /* Floating effect */
+  .float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  /* Glow effect */
+  .glow {
+    @apply shadow-lg;
+    filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.5));
+  }
+
+  .glow-purple {
+    filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.5));
+  }
+
+  /* Transition utilities */
+  .transition-smooth {
+    @apply transition-all duration-300 ease-in-out;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.5);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.7);
+}

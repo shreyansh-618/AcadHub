@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: academic-platform-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://backend:3000
+      - VITE_AI_SERVICE_URL=http://ai-service:8000
+    depends_on:
+      - backend
+      - ai-service
+    volumes:
+      - ./frontend/src:/app/src
+    networks:
+      - academic-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: academic-platform-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - AI_SERVICE_URL=http://ai-service:8000
+    depends_on:
+      - mongodb
+    volumes:
+      - ./backend/src:/app/src
+    networks:
+      - academic-network
+
+  # AI Service
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: academic-platform-ai
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MONGODB_URI=${MONGODB_URI}
+      - MODEL_NAME=sentence-transformers/paraphrase-MiniLM-L6-v2
+    depends_on:
+      - mongodb
+    volumes:
+      - ./ai-service/app:/app/app
+      - ./ai-service/models:/app/models
+    networks:
+      - academic-network
+
+  # MongoDB
+  mongodb:
+    image: mongo:7.0
+    container_name: academic-platform-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+      - MONGO_INITDB_DATABASE=academic_platform
+    volumes:
+      - mongodb_data:/data/db
+      - ./docs/mongo-init.js:/docker-entrypoint-initdb.d/init.js
+    networks:
+      - academic-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test -u ${MONGO_ROOT_USER} -p ${MONGO_ROOT_PASSWORD}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongodb_data:
+
+networks:
+  academic-network:
+    driver: bridge

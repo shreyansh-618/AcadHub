@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pymongo>=4.14.0
+motor>=3.3.0
+transformers
+sentence-transformers
+pydantic
+python-dotenv
+httpx
