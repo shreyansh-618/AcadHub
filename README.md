@@ -1,351 +1,289 @@
-# 🎓 Academic Platform - Complete Project
+# Academic Platform - Complete Project
 
-An AI-powered academic resource management system with:
-- ✨ Beautiful dark theme with glassmorphic design
-- 🔐 Secure user authentication (email & Google OAuth)
-- 🔍 AI-powered semantic search with filters
-- 💬 Collaborative discussions and Q&A
-- 📚 Centralized resource management
-- 📱 Fully responsive mobile design
+An AI-powered academic resource management system designed to centralize academic materials, enable intelligent discovery, and promote collaborative learning among students and educators.
 
-**Status**: ✅ **PRODUCTION READY**
+**Status:** Production Ready
 
-## 🚀 Quick Start (3 Steps)
+---
 
-See [QUICK_START.md](QUICK_START.md) for detailed instructions.
+## Overview
 
-```bash
-# Terminal 1: Frontend
-cd frontend && npm run dev  # http://localhost:5174
+This platform provides a unified environment for managing academic resources, conducting semantic searches using AI, and enabling peer-to-peer collaboration through discussions and knowledge sharing.
 
-# Terminal 2: Backend
-cd backend && npm run dev   # http://localhost:3000
+The system combines modern web technologies with machine learning–based semantic retrieval to improve how academic content is organized, discovered, and consumed.
 
-# Terminal 3: Python AI Service
-cd ai-service && python main.py  # http://localhost:8000
-```
+---
 
-## 🌟 What's New (This Session)
+## Key Features
 
-### ✨ Dark Theme & Glassmorphism
-- Complete dark mode color palette (slate series)
-- Glassmorphic effects: backdrop blur, opacity, borders
-- 240+ lines of custom Tailwind CSS
-- Smooth animations and transitions
-- Custom scrollbar styling
-- Gradient text effects
+### Authentication and Access Control
 
-### 📝 Signup Page (250+ lines)
-- Full form with validation
-- Name, email, password, role, department fields
-- Firebase integration
-- Error handling and loading states
-- Success notifications and redirect
+* Secure email and password authentication
+* Google OAuth integration
+* JWT-based session management
+* Protected routes
+* Role-based authorization
 
-### 🔍 Search Page (350+ lines)
-- Sticky search bar with semantic understanding
-- Multiple filters (department, subject, category, semester)
-- Results grid with responsive layout
-- Recent searches with localStorage
-- Empty state handling
+### AI-Powered Semantic Search
 
-### 🧭 Updated Navigation
-- Glassmorphic navbar with mobile menu
-- Glassmorphic footer with links
-- Responsive on all screen sizes
-- Updated Home and Login pages with dark theme
+* Natural language academic search
+* Vector embeddings using Sentence-BERT
+* Cosine similarity–based retrieval
+* Advanced filtering by department, subject, category, and semester
+* Recent search tracking
 
-## 🏗️ Architecture Overview
+### Resource Management
 
-```
-React Frontend (5174)
-    ↓ REST API
-Express Backend (3000)
-    ↓ Firebase & MongoDB
-Firebase + MongoDB Atlas
-Backend ↓ Semantic Search API
-FastAPI AI Service (8000)
-    ↓ Embeddings Query
-MongoDB (Vector Storage)
-```
+* Centralized academic resource repository
+* Structured metadata management
+* File upload and storage support
+* Organized academic categorization
 
-## 📁 Project Structure
+### Collaborative Discussions
 
-```
-smart/
-├── frontend/                # React + Vite
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── Signup.jsx      # NEW: Complete signup form
-│   │   │   ├── Search.jsx      # NEW: Search interface
-│   │   │   ├── Login.jsx       # UPDATED: Dark theme
-│   │   │   ├── Home.jsx        # UPDATED: Dark theme
-│   │   │   └── ...
-│   │   ├── components/
-│   │   │   ├── Navbar.jsx      # UPDATED: Glassmorphic
-│   │   │   ├── Footer.jsx      # UPDATED: Glassmorphic
-│   │   │   └── ...
-│   │   ├── styles/
-│   │   │   └── index.css       # UPDATED: Dark theme CSS
-│   │   └── ...
-│   └── package.json
-├── backend/                 # Express.js
-│   ├── src/
-│   │   ├── models/          # MongoDB schemas
-│   │   ├── routes/          # API endpoints
-│   │   ├── middleware/      # Auth & logging
-│   │   └── config/          # Database setup
-│   └── package.json
-├── ai-service/              # FastAPI + Python
-│   ├── app/
-│   │   ├── routes/          # API endpoints
-│   │   ├── services/        # Embedding & search
-│   │   └── config/          # Settings
-│   ├── main.py
-│   └── requirements.txt
-│
-├── QUICK_START.md           # 3-step setup guide
-├── FRONTEND_SETUP_COMPLETE.md
-├── AI_SERVICE_GUIDE.md
-├── COMPLETE_TESTING_GUIDE.md
-└── README.md                # This file
-```
+* Academic Q&A forums
+* Peer learning and knowledge exchange
+* Resource-linked discussions
+* Community-driven answer validation
 
-## 📊 Technology Stack
+### Event and Announcement Management
+
+* Academic event creation and management
+* Calendar-based scheduling
+* Assignment and examination tracking
+* Notification-ready architecture
+
+### User Experience
+
+* Consistent dark theme design
+* Glassmorphic UI components
+* Responsive layout across devices
+* Accessible and touch-friendly interface
+* Smooth transitions and animations
+
+---
+
+## Technology Stack
 
 ### Frontend
-- **React 18** - UI framework
-- **Vite 5** - Build tool
-- **Tailwind CSS 3.3** - Dark theme + glassmorphism
-- **Firebase 10.7** - Authentication
-- **React Router 6.18** - Navigation
-- **Axios 1.6** - HTTP client
-- **Zustand 4.4** - State management
+
+* React 18
+* Vite
+* Tailwind CSS
+* React Router
+* Axios
+* Zustand
+* Firebase Authentication
 
 ### Backend
-- **Express.js 4.18** - REST API framework
-- **MongoDB 7.6** - Primary database
-- **Mongoose 7.6** - ODM
-- **Firebase Admin 11.11** - Backend auth
-- **Pino 8.17** - Logging
-- **Socket.io 4.7** - Real-time updates
+
+* Node.js
+* Express.js
+* MongoDB Atlas
+* Mongoose
+* Firebase Admin SDK
+* Socket.io
+* Pino Logging
 
 ### AI Service
-- **FastAPI 0.104** - Web framework
-- **Uvicorn 0.24** - ASGI server
-- **Sentence-Transformers 2.2** - BERT embeddings
-- **Motor 3.3** - Async MongoDB
-- **PyTorch 2.1** - Deep learning
-- **NumPy & SciPy** - Numerical computing
 
-## 🎨 Design System
+* FastAPI
+* Uvicorn
+* Sentence-Transformers
+* PyTorch
+* Motor (Async MongoDB Driver)
+* NumPy and SciPy
 
-### Dark Theme Colors
-- **Backgrounds**: slate-950, slate-900, slate-800
-- **Text**: slate-100, slate-300, slate-400
-- **Accents**: Blue, Purple, Pink, Green, Yellow, Red
+---
 
-### Component Classes
-```css
-.btn-primary       /* Blue gradient button */
-.btn-secondary     /* Purple gradient button */
-.btn-ghost         /* Transparent button */
-.card              /* Glassmorphic card */
-.glass, .glass-sm, .glass-lg  /* Glass effects */
-.input-field, .textarea-field  /* Dark form inputs */
-.badge             /* Status badges */
-.gradient-text     /* Gradient text effect */
-```
+## Architecture Overview
 
-## 🔐 Features
+The application follows a distributed service architecture:
 
-### Authentication
-- Email/password signup with validation
-- Gmail OAuth integration
-- JWT token management
-- Protected routes
-- Role-based access control
+* React frontend communicates with the Express backend via REST APIs.
+* Authentication and user validation are handled through Firebase services.
+* MongoDB stores application data and vector embeddings.
+* A dedicated FastAPI-based AI service processes semantic search queries using embedding models.
+* Vector similarity search enables intelligent academic resource discovery.
 
-### Search
-- Semantic search with AI
-- Multiple filter options
-- Recent search tracking
-- Responsive results grid
-- Empty state handling
+---
 
-### UI/UX
-- Dark theme throughout
-- Glassmorphic effects
-- Mobile responsive
-- Smooth animations
-- Accessible design
-- Touch-friendly
+## Quick Start
 
-## 🧪 Testing
-
-### Quick Test (5 minutes)
-1. Start all services
-2. Go to http://localhost:5174
-3. Sign up → Search → View results
-
-### Full Test (45 minutes)
-See [COMPLETE_TESTING_GUIDE.md](COMPLETE_TESTING_GUIDE.md) for:
-- Setup verification
-- Frontend testing
-- Backend integration
-- Search functionality
-- Error handling
-- Mobile responsiveness
-
-## 📈 Performance
-
-- **Build Size**: ~300KB (gzipped)
-- **API Response**: < 200ms
-- **Search**: 1-5 seconds
-- **Model Load**: 30-60s first time, 5-10s cached
-
-## 🚢 Deployment
-- Converts documents to embeddings using Sentence-BERT
-- Cosine similarity-based retrieval
-- Natural language query understanding
-- Fast and accurate results
-
-### Discussion & Q&A Forum
-- Ask academic questions
-- Answer and peer-to-peer learning
-- Link resources to discussions
-- Upvoting system for helpful answers
-
-### Event & Announcement Management
-- Create and manage academic events
-- Calendar view integration
-- Email and in-app notifications
-- Assignment and exam deadlines
-
-## 📋 Prerequisites
-
-- **Node.js** v18+
-- **Python** 3.9+
-- **MongoDB Atlas** account
-- **Firebase** project
-- **Docker** and **Docker Compose** (optional)
-
-## 🔧 Setup Instructions
-
-### 1. Frontend Setup
+### 1. Frontend
 
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local
 npm run dev
 ```
 
-### 2. Backend Setup
+Frontend runs at:
+[http://localhost:5174](http://localhost:5174)
+
+---
+
+### 2. Backend
 
 ```bash
 cd backend
 npm install
-cp .env.example .env
 npm run dev
 ```
 
-### 3. AI Service Setup
+Backend runs at:
+[http://localhost:3000](http://localhost:3000)
+
+---
+
+### 3. AI Service
 
 ```bash
 cd ai-service
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
 python main.py
 ```
 
-## 📚 API Documentation
-
-Comprehensive API documentation is available in [docs/API.md](docs/API.md)
-
-### Key Endpoints
-
-**Auth**
-- `POST /api/v1/auth/signup`
-- `POST /api/v1/auth/login`
-- `POST /api/v1/auth/logout`
-
-**Resources**
-- `GET /api/v1/resources` - List resources
-- `POST /api/v1/resources` - Upload resource
-- `DELETE /api/v1/resources/:id` - Delete resource
-
-**Search**
-- `POST /api/v1/search/semantic` - Semantic search
-
-**Discussions**
-- `GET /api/v1/discussions` - List discussions
-- `POST /api/v1/discussions` - Create discussion
-- `POST /api/v1/discussions/:id/answers` - Add answer
-
-**Events**
-- `GET /api/v1/events` - List events
-- `POST /api/v1/events` - Create event (Admin only)
-
-## 🔐 Type Safety & Error Handling
-
-The project uses TypeScript across frontend and backend for type safety. All APIs follow consistent error handling patterns with proper HTTP status codes and meaningful error messages.
-
-## 📦 Environment Variables
-
-Create `.env` files based on provided `.env.example` files in each directory.
-
-**Key variables:**
-- `MONGODB_URI`: MongoDB connection string
-- `FIREBASE_CONFIG`: Firebase configuration
-- `JWT_SECRET`: JWT signing secret
-- `VITE_API_URL`: Backend API URL (frontend)
-
-## 🧪 Testing
-
-```bash
-# Frontend
-cd frontend && npm run test
-
-# Backend
-cd backend && npm run test
-
-# AI Service
-cd ai-service && pytest tests/
-```
-
-## 📊 Database Schema
-
-Collections:
-- `users` - User profiles and authentication
-- `resources` - Resource metadata
-- `discussions` - Q&A discussions
-- `answers` - Discussion answers
-- `events` - Academic events
-- `embeddings` - Vector embeddings for semantic search
-- `files` - GridFS for file storage
-
-## 🔄 Deployment
-
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for production deployment instructions using Docker, Kubernetes, or cloud platforms.
-
-## 📝 Contributing
-
-- Follow the coding standards in the project
-- Create feature branches from `main`
-- Submit pull requests with clear descriptions
-- All code must include tests
-
-## 📄 License
-
-MIT
-
-## 👥 Support
-
-For issues, questions, or suggestions, please open an issue on the repository.
+AI service runs at:
+[http://localhost:8000](http://localhost:8000)
 
 ---
 
-**Created:** February 2026  
+## Environment Configuration
+
+Create environment configuration files based on the provided examples.
+
+### Required Variables
+
+* `MONGODB_URI` — MongoDB connection string
+* `FIREBASE_CONFIG` — Firebase configuration credentials
+* `JWT_SECRET` — Token signing secret
+* `VITE_API_URL` — Backend API endpoint
+
+---
+
+## API Overview
+
+### Authentication
+
+* `POST /api/v1/auth/signup`
+* `POST /api/v1/auth/login`
+* `POST /api/v1/auth/logout`
+
+### Resources
+
+* `GET /api/v1/resources`
+* `POST /api/v1/resources`
+* `DELETE /api/v1/resources/:id`
+
+### Semantic Search
+
+* `POST /api/v1/search/semantic`
+
+### Discussions
+
+* `GET /api/v1/discussions`
+* `POST /api/v1/discussions`
+* `POST /api/v1/discussions/:id/answers`
+
+### Events
+
+* `GET /api/v1/events`
+* `POST /api/v1/events`
+
+---
+
+## Performance Metrics
+
+* Optimized frontend bundle size (~300 KB gzipped)
+* Average API response time under 200 ms
+* Semantic search response between 1–5 seconds
+* Embedding model initialization cached after first load
+
+---
+
+## Testing
+
+### Frontend Testing
+
+```bash
+cd frontend
+npm run test
+```
+
+### Backend Testing
+
+```bash
+cd backend
+npm run test
+```
+
+### AI Service Testing
+
+```bash
+cd ai-service
+pytest tests/
+```
+
+---
+
+## Deployment
+
+The platform supports production deployment using containerized or cloud-based environments.
+
+Supported approaches include:
+
+* Docker-based deployment
+* Kubernetes orchestration
+* Cloud deployment on Azure, AWS, or similar platforms
+
+Refer to deployment documentation for infrastructure configuration and scaling guidelines.
+
+---
+
+## Security Practices
+
+* Token-based authentication
+* Backend authorization middleware
+* Environment-based configuration management
+* Structured error handling
+* Secure API communication patterns
+
+---
+
+## Database Design
+
+Primary collections include:
+
+* Users
+* Resources
+* Discussions
+* Answers
+* Events
+* Embeddings
+* File storage (GridFS)
+
+---
+
+## Contribution Guidelines
+
+* Follow established coding standards
+* Use feature branches derived from `main`
+* Submit pull requests with clear documentation
+* Ensure testing coverage for new features
+
+---
+
+## License
+
+MIT License
+
+---
+
+## Project Information
+
 **Version:** 1.0.0-alpha
+**Release:** February 2026
+**Category:** AI-Powered Academic Collaboration Platform
