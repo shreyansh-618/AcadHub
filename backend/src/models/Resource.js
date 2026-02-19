@@ -54,11 +54,13 @@ const resourceSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    filePath: {
-      type: String,
+    // GridFS File ID
+    fileId: {
+      type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
-    fileUrl: {
+    // Original filename
+    fileName: {
       type: String,
       required: true,
     },
@@ -82,7 +84,7 @@ const resourceSchema = new mongoose.Schema(
     ],
     isApproved: {
       type: Boolean,
-      default: false,
+      default: true,
       index: true,
     },
     approvedBy: {

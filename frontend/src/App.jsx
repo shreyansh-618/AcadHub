@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { authService } from "@/services/auth";
+import { apiClient } from "@/services/api";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -19,6 +20,8 @@ import DashboardPage from "@/pages/Dashboard";
 import ProfilePage from "@/pages/Profile";
 import SearchPage from "@/pages/Search";
 import ResourcesPage from "@/pages/Resources";
+import ResourceDetailPage from "@/pages/ResourceDetail";
+import FileViewerPage from "@/pages/FileViewer";
 import DiscussionsPage from "@/pages/Discussions";
 import EventsPage from "@/pages/Events";
 import NotFoundPage from "@/pages/NotFound";
@@ -30,25 +33,71 @@ export default function App() {
   useEffect(() => {
     // Subscribe to auth state changes
     const unsubscribe = authService.onAuthStateChanged(async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-          // Get user profile from backend
-          const response = await fetch("/api/v1/users/profile", {
-            headers: {
-              Authorization: `Bearer ${await firebaseUser.getIdToken()}`,
-            },
-          });
-          if (response.ok) {
-            const userData = await response.json();
-            setUser(userData);
+      setLoading(true);
+      try {
+        if (firebaseUser) {
+          // Ensure we have a fresh ID token stored for API calls
+          try {
+            const idToken = await firebaseUser.getIdToken();
+            localStorage.setItem("authToken", idToken);
+          } catch (tokenError) {
+            console.error("Failed to refresh auth token:", tokenError);
           }
-        } catch (error) {
-          console.error("Failed to fetch user profile:", error);
+
+          // Immediately set a minimal user from Firebase so protected routes can render
+          setUser((prev) =>
+            prev || {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              name:
+                firebaseUser.displayName ||
+                firebaseUser.email ||
+                "User",
+              role: "student",
+              department: "Computer Science",
+            },
+          );
+
+          // Then try to enrich with full backend profile
+          try {
+            const response = await apiClient.get("/api/v1/users/profile");
+            if (response.status === 200 && response.data?.data?.user) {
+              // Extract user data from response structure
+              setUser(response.data.data.user);
+            } else {
+              console.error("Invalid profile response structure", response.data);
+            }
+          } catch (profileError) {
+            console.error("Failed to fetch user profile:", profileError);
+            const status = profileError.response?.status;
+
+            if (status === 401) {
+              // Only log out on real authentication failures
+              await authService.logout();
+              setUser(null);
+            } else if (status === 404) {
+              // Profile doesn't exist yet, but Firebase auth is valid.
+              // Keep the Firebase-based user so navigation still works.
+              console.warn(
+                "User profile not found; continuing with Firebase user only",
+              );
+            } else {
+              // For other errors, keep the user logged in (e.g. network issues)
+              console.warn(
+                "Profile fetch error but keeping user session:",
+                profileError.message,
+              );
+            }
+          }
+        } else {
+          setUser(null);
         }
-      } else {
+      } catch (error) {
+        console.error("Auth state check error:", error);
         setUser(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return unsubscribe;
@@ -106,6 +155,16 @@ export default function App() {
               element={
                 <ProtectedRoute user={user} element={<ResourcesPage />} />
               }
+            />
+            <Route
+              path="/resources/:id"
+              element={
+                <ProtectedRoute user={user} element={<ResourceDetailPage />} />
+              }
+            />
+            <Route
+              path="/resources/:id/view"
+              element={<FileViewerPage />}
             />
             <Route
               path="/discussions"

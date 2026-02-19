@@ -209,8 +209,19 @@ export default function Resources() {
                   {/* Actions */}
                   <div className="flex gap-2">
                     <a
-                      href={resource.fileUrl}
+                      href={`/resources/${resource._id}/view`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-primary text-sm py-2 flex-1 text-center bg-green-600 hover:bg-green-700"
+                      title="Open file in new tab"
+                    >
+                      Open
+                    </a>
+                    <a
+                      href={`http://localhost:3000/api/v1/resources/${resource._id}/download`}
                       download
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="btn-primary text-sm py-2 flex-1 text-center"
                     >
                       Download
@@ -219,7 +230,7 @@ export default function Resources() {
                       to={`/resources/${resource._id}`}
                       className="btn-secondary text-sm py-2 flex-1 text-center"
                     >
-                      View
+                      Details
                     </Link>
                   </div>
                 </div>

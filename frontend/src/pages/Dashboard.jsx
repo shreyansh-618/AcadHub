@@ -24,17 +24,38 @@ export default function DashboardPage() {
 
         const token = await firebaseUser.getIdToken();
 
-        // Fetch user profile
-        const profileRes = await fetch('/api/v1/users/profile', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        // Fetch user profile with retry logic
+        let profileData = null;
+        let retries = 3;
+        while (retries > 0) {
+          try {
+            const profileRes = await fetch('/api/v1/users/profile', {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              },
+            });
 
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          setUser(profileData.data?.user || profileData);
+            if (profileRes.ok) {
+              const data = await profileRes.json();
+              profileData = data.data?.user || data;
+              setUser(profileData);
+              break;
+            } else if (profileRes.status === 404 && retries > 1) {
+              // User profile might not exist yet, retry after delay
+              await new Promise(resolve => setTimeout(resolve, 500));
+              retries--;
+            } else {
+              break;
+            }
+          } catch (error) {
+            if (retries > 1) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+              retries--;
+            } else {
+              throw error;
+            }
+          }
         }
 
         // Fetch documents
@@ -176,9 +197,26 @@ export default function DashboardPage() {
                     <span>❤️ {doc.likes} likes</span>
                   </div>
 
-                  <button className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
-                    View Document
-                  </button>
+                  <div className="flex gap-2">
+                    <a 
+                      href={`/resources/${doc._id}/view`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors inline-block text-center text-sm"
+                      title="Open file in new tab"
+                    >
+                      Open
+                    </a>
+                    <a 
+                      href={`http://localhost:3000/api/v1/resources/${doc._id}/download`}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors inline-block text-center text-sm"
+                    >
+                      Download
+                    </a>
+                  </div>
                 </div>
               ))}
             </div>

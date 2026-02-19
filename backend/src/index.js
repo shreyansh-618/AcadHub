@@ -17,7 +17,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Security middleware
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginOpenerPolicy: false, // Allow Firebase popup auth
+  })
+);
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -44,9 +48,6 @@ app.use(
 // Body parsing middleware
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
-
-// Serve static files from uploads directory
-app.use("/uploads", express.static("./uploads"));
 
 // Initialize Firebase
 initFirebase();

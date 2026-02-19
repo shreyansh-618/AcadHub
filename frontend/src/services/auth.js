@@ -82,6 +82,9 @@ export const authService = {
         department,
       });
 
+      // Wait a moment for auth state to update
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -127,6 +130,9 @@ export const authService = {
         email: result.user.email,
         name: result.user.displayName || 'User',
       });
+
+      // Wait a moment for auth state to update
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       return response.data;
     } catch (error) {
