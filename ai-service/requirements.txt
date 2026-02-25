@@ -4,6 +4,8 @@ pymongo>=4.14.0
 motor>=3.3.0
 transformers
 sentence-transformers
+scipy
 pydantic
 python-dotenv
 httpx
+numpy

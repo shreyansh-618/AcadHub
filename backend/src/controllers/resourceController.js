@@ -49,34 +49,33 @@ export const uploadResource = async (req, res) => {
     };
     const fileType = typeMapping[fileExt] || "pdf";
 
-    // Get GridFSBucket instance
-    const gridFSBucket = getGridFS();
+    // Get GridFS instance
+    const gfs = getGridFS();
 
-    // Create GridFS upload stream
-    const uploadStream = gridFSBucket.openUploadStream(req.file.originalname, {
+    // Create GridFS write stream
+    const writestream = gfs.createWriteStream({
+      filename: req.file.originalname,
       metadata: {
-        uploadedBy: user._id.toString(),
+        uploadedBy: user._id,
         uploadedByName: user.name,
         uploadDate: new Date(),
       },
     });
 
-    // Get the file ID (available immediately)
-    const fileId = uploadStream.id;
-
     // Handle stream events
-    const uploadPromise = new Promise((resolve, reject) => {
-      uploadStream.on("finish", () => {
-        resolve(fileId);
+    const fileIdPromise = new Promise((resolve, reject) => {
+      writestream.on("close", (file) => {
+        resolve(file._id);
       });
-      uploadStream.on("error", reject);
+      writestream.on("error", reject);
     });
 
     // Write file buffer to stream
-    uploadStream.end(req.file.buffer);
+    writestream.write(req.file.buffer);
+    writestream.end();
 
-    // Wait for upload to complete
-    await uploadPromise;
+    // Get the file ID
+    const fileId = await fileIdPromise;
 
     // Create resource with GridFS file information
     const resource = await Resource.create({
@@ -102,16 +101,7 @@ export const uploadResource = async (req, res) => {
       data: { resource },
     });
   } catch (error) {
-    logger.error(
-      {
-        err: {
-          message: error.message,
-          name: error.name,
-          stack: error.stack,
-        },
-      },
-      "Upload resource error",
-    );
+    logger.error("Upload resource error:", error);
     res.status(500).json({
       code: "UPLOAD_ERROR",
       message: error.message || "Failed to upload resource",
@@ -246,7 +236,8 @@ export const getResourceById = async (req, res) => {
       });
     }
 
-    // Don't increment downloads here - only increment on actual download
+    // Increment downloads
+    await Resource.findByIdAndUpdate(id, { $inc: { downloads: 1 } });
 
     res.json({
       code: "SUCCESS",
@@ -357,13 +348,11 @@ export const deleteResource = async (req, res) => {
     }
 
     // Delete GridFS file
-    const gridFSBucket = getGridFS();
+    const gfs = getGridFS();
     if (resource.fileId) {
-      try {
-        await gridFSBucket.delete(resource.fileId);
-      } catch (err) {
-        logger.warn("Could not delete GridFS file:", err);
-      }
+      gfs.remove({ _id: resource.fileId }, (err) => {
+        if (err) logger.warn("Could not delete GridFS file:", err);
+      });
     }
 
     await Resource.findByIdAndDelete(id);
@@ -382,74 +371,6 @@ export const deleteResource = async (req, res) => {
 };
 
 /**
- * View a resource file (inline viewing for PDFs, images, etc.)
- */
-export const viewResource = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const resource = await Resource.findById(id);
-
-    if (!resource) {
-      return res.status(404).json({
-        code: "NOT_FOUND",
-        message: "Resource not found",
-      });
-    }
-
-    const gridFSBucket = getGridFS();
-    const downloadStream = gridFSBucket.openDownloadStream(resource.fileId);
-
-    downloadStream.on("error", (err) => {
-      logger.error("GridFS read error:", err);
-      if (!res.headersSent) {
-        return res.status(500).json({
-          code: "VIEW_ERROR",
-          message: "Failed to view file",
-        });
-      }
-    });
-
-    // Determine content type based on file extension
-    const fileExt = resource.fileName.split(".").pop().toLowerCase();
-    const contentTypeMap = {
-      pdf: "application/pdf",
-      jpg: "image/jpeg",
-      jpeg: "image/jpeg",
-      png: "image/png",
-      gif: "image/gif",
-      webp: "image/webp",
-      txt: "text/plain",
-      doc: "application/msword",
-      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      xls: "application/vnd.ms-excel",
-      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    };
-    const contentType = contentTypeMap[fileExt] || "application/octet-stream";
-
-    // Set response headers for inline viewing
-    res.setHeader("Content-Type", contentType);
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename="${encodeURIComponent(resource.fileName)}"`
-    );
-    // Add CORS headers to allow cross-origin requests
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET");
-    res.setHeader("X-Content-Type-Options", "nosniff");
-
-    downloadStream.pipe(res);
-  } catch (error) {
-    logger.error("View resource error:", error);
-    res.status(500).json({
-      code: "VIEW_ERROR",
-      message: error.message || "Failed to view resource",
-    });
-  }
-};
-
-/**
  * Download a resource file
  */
 export const downloadResource = async (req, res) => {
@@ -459,7 +380,7 @@ export const downloadResource = async (req, res) => {
     const resource = await Resource.findByIdAndUpdate(
       id,
       { $inc: { downloads: 1 } },
-      { new: true }
+      { new: true },
     );
 
     if (!resource) {
@@ -469,43 +390,27 @@ export const downloadResource = async (req, res) => {
       });
     }
 
-    const gridFSBucket = getGridFS();
-    const downloadStream = gridFSBucket.openDownloadStream(resource.fileId);
-
-    downloadStream.on("error", (err) => {
-      logger.error("GridFS read error:", err);
-      if (!res.headersSent) {
-        return res.status(500).json({
-          code: "DOWNLOAD_ERROR",
-          message: "Failed to download file",
-        });
-      }
+    const gfs = getGridFS();
+    const readstream = gfs.createReadStream({
+      _id: resource.fileId,
     });
 
-    // Determine content type based on file extension
-    const fileExt = resource.fileName.split(".").pop().toLowerCase();
-    const contentTypeMap = {
-      pdf: "application/pdf",
-      jpg: "image/jpeg",
-      jpeg: "image/jpeg",
-      png: "image/png",
-      gif: "image/gif",
-      webp: "image/webp",
-      txt: "text/plain",
-      doc: "application/msword",
-      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    };
-    const contentType = contentTypeMap[fileExt] || "application/octet-stream";
+    readstream.on("error", (err) => {
+      logger.error("GridFS read error:", err);
+      return res.status(500).json({
+        code: "DOWNLOAD_ERROR",
+        message: "Failed to download file",
+      });
+    });
 
-    // Set response headers for download
-    res.setHeader("Content-Type", contentType);
+    // Set response headers
+    res.setHeader("Content-Type", "application/octet-stream");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${resource.fileName}"`
+      `attachment; filename="${resource.fileName}"`,
     );
 
-    downloadStream.pipe(res);
+    readstream.pipe(res);
   } catch (error) {
     logger.error("Download resource error:", error);
     res.status(500).json({

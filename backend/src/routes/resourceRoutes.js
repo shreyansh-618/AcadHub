@@ -8,7 +8,6 @@ import {
   likeResource,
   deleteResource,
   downloadResource,
-  viewResource,
 } from '../controllers/resourceController.js';
 import { authMiddleware } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
@@ -42,13 +41,6 @@ router.get('/my-uploads', authMiddleware, getUserResources);
  * @access  Private
  */
 router.get('/my-likes', authMiddleware, getUserLikedResources);
-
-/**
- * @route   GET /api/v1/resources/:id/view
- * @desc    View resource file (inline)
- * @access  Public
- */
-router.get('/:id/view', viewResource);
 
 /**
  * @route   GET /api/v1/resources/:id/download

@@ -48,14 +48,27 @@ class EmbeddingService:
     
     def similarity(self, embedding1: List[float], embedding2: List[float]) -> float:
         """Calculate cosine similarity between two embeddings"""
-        from scipy.spatial.distance import cosine
         import numpy as np
         
-        e1 = np.array(embedding1)
-        e2 = np.array(embedding2)
-        
-        # Cosine similarity = 1 - cosine distance
-        return 1 - cosine(e1, e2)
+        try:
+            from scipy.spatial.distance import cosine
+            e1 = np.array(embedding1)
+            e2 = np.array(embedding2)
+            # Cosine similarity = 1 - cosine distance
+            return float(1 - cosine(e1, e2))
+        except ImportError:
+            # Fallback: manual cosine similarity calculation
+            e1 = np.array(embedding1, dtype=np.float32)
+            e2 = np.array(embedding2, dtype=np.float32)
+            
+            dot_product = np.dot(e1, e2)
+            norm_e1 = np.linalg.norm(e1)
+            norm_e2 = np.linalg.norm(e2)
+            
+            if norm_e1 == 0 or norm_e2 == 0:
+                return 0.0
+            
+            return float(dot_product / (norm_e1 * norm_e2))
 
 # Global instance
 embedding_service = EmbeddingService()

@@ -16,6 +16,7 @@ export default function SignupPage() {
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    if (loading) return; // Prevent double submission
 
     // Validation
     if (!name.trim()) {
@@ -41,10 +42,11 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      await authService.signup(name, email, password, role, department);
-      toast.success("Account created successfully! 🎉");
-      // Wait for auth state to update before navigating
-      setTimeout(() => navigate("/dashboard"), 500);
+      const result = await authService.signup(name, email, password, role, department);
+      if (result?.data?.user) {
+        toast.success("Account created successfully! 🎉");
+        // Navigation happens automatically via App.jsx auth state change
+      }
     } catch (error) {
       toast.error(error.message || "Signup failed. Please try again.");
       setLoading(false);
@@ -52,12 +54,14 @@ export default function SignupPage() {
   };
 
   const handleGoogleSignup = async () => {
+    if (googleLoading) return; // Prevent double submission
     setGoogleLoading(true);
     try {
-      await authService.signupWithGoogle(role, department);
-      toast.success("Account created with Google! 🎉");
-      // Wait for auth state to update before navigating
-      setTimeout(() => navigate("/dashboard"), 500);
+      const result = await authService.signupWithGoogle(role, department);
+      if (result?.data?.user) {
+        toast.success("Account created with Google! 🎉");
+        // Navigation happens automatically via App.jsx auth state change
+      }
     } catch (error) {
       toast.error(error.message || "Google signup failed. Please try again.");
       setGoogleLoading(false);
@@ -65,33 +69,33 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen flex items-center justify-center px-3 sm:px-4 py-6 sm:py-12">
       {/* Background gradient */}
       <div className="absolute inset-0 -z-10">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-blue-500 rounded-full opacity-10 blur-3xl"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500 rounded-full opacity-10 blur-3xl"></div>
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 sm:w-96 h-48 sm:h-96 bg-blue-500 rounded-full opacity-10 blur-3xl"></div>
+        <div className="absolute bottom-0 right-1/4 w-48 sm:w-96 h-48 sm:h-96 bg-purple-500 rounded-full opacity-10 blur-3xl"></div>
       </div>
 
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-sm">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold gradient-text mb-2">Welcome!</h1>
-          <p className="text-slate-300">Create your account to get started</p>
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-2">Welcome!</h1>
+          <p className="text-sm sm:text-base text-slate-300">Create your account to get started</p>
         </div>
 
         {/* Form Card */}
-        <div className="glass-lg p-8">
-          <form onSubmit={handleSignup} className="space-y-5">
+        <div className="glass-lg p-6 sm:p-8">
+          <form onSubmit={handleSignup} className="space-y-4 sm:space-y-5">
             {/* Name Field */}
             <div>
-              <label className="block text-sm font-semibold text-slate-200 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
                 Full Name
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="input-field"
+                className="input-field text-sm"
                 placeholder="John Doe"
                 required
               />
@@ -99,14 +103,14 @@ export default function SignupPage() {
 
             {/* Email Field */}
             <div>
-              <label className="block text-sm font-semibold text-slate-200 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
                 Email Address
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-field"
+                className="input-field text-sm"
                 placeholder="your@email.com"
                 required
               />
@@ -114,13 +118,13 @@ export default function SignupPage() {
 
             {/* Role Selection */}
             <div>
-              <label className="block text-sm font-semibold text-slate-200 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
                 Role
               </label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                className="input-field"
+                className="input-field text-sm"
               >
                 <option value="student">Student</option>
                 <option value="faculty">Faculty</option>
@@ -130,13 +134,13 @@ export default function SignupPage() {
 
             {/* Department Selection */}
             <div>
-              <label className="block text-sm font-semibold text-slate-200 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
                 Department
               </label>
               <select
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
-                className="input-field"
+                className="input-field text-sm"
               >
                 <option value="Computer Science">Computer Science</option>
                 <option value="Electronics">Electronics</option>
@@ -149,14 +153,14 @@ export default function SignupPage() {
 
             {/* Password Field */}
             <div>
-              <label className="block text-sm font-semibold text-slate-200 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
                 Password
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-field"
+                className="input-field text-sm"
                 placeholder="••••••••"
                 required
               />
@@ -167,14 +171,14 @@ export default function SignupPage() {
 
             {/* Confirm Password Field */}
             <div>
-              <label className="block text-sm font-semibold text-slate-200 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
                 Confirm Password
               </label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="input-field"
+                className="input-field text-sm"
                 placeholder="••••••••"
                 required
               />
@@ -184,18 +188,18 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {loading ? "Creating Account..." : "Create Account"}
             </button>
           </form>
 
           {/* Divider */}
-          <div className="relative my-6">
+          <div className="relative my-5 sm:my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-600 border-opacity-30"></div>
             </div>
-            <div className="relative flex justify-center text-sm">
+            <div className="relative flex justify-center text-xs sm:text-sm">
               <span className="px-2 bg-slate-800 bg-opacity-50 text-slate-400">
                 Or continue with
               </span>
@@ -207,9 +211,9 @@ export default function SignupPage() {
             type="button"
             onClick={handleGoogleSignup}
             disabled={googleLoading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-lg border border-slate-600 text-slate-200 font-medium hover:bg-slate-700 hover:bg-opacity-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-600 text-slate-200 font-medium hover:bg-slate-700 hover:bg-opacity-50 transition disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
           >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <svg className="w-4 sm:w-5 h-4 sm:h-5" viewBox="0 0 24 24" fill="currentColor">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                 fill="#4285F4"
@@ -227,22 +231,23 @@ export default function SignupPage() {
                 fill="#EA4335"
               ></path>
             </svg>
-            {googleLoading ? "Signing up..." : "Sign up with Google"}
+            <span className="hidden sm:inline">{googleLoading ? "Signing up..." : "Sign up with Google"}</span>
+            <span className="sm:hidden">{googleLoading ? "Signing up..." : "Google"}</span>
           </button>
 
           {/* Login Link */}
-          <div className="relative my-6">
+          <div className="relative my-5 sm:my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-600 border-opacity-30"></div>
             </div>
-            <div className="relative flex justify-center text-sm">
+            <div className="relative flex justify-center text-xs sm:text-sm">
               <span className="px-2 bg-slate-800 bg-opacity-50 text-slate-400">
                 Already have an account?
               </span>
             </div>
           </div>
 
-          <Link to="/login" className="block w-full text-center btn-ghost">
+          <Link to="/login" className="block w-full text-center btn-ghost text-sm sm:text-base">
             Sign In
           </Link>
         </div>

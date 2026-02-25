@@ -11,6 +11,10 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    headers: {
+      // Helps Firebase popup auth avoid COOP-related browser restrictions in dev.
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+    },
     proxy: {
       '/api': {
         target: process.env.VITE_API_URL || 'http://localhost:3000',

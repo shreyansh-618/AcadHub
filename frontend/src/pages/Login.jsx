@@ -11,13 +11,15 @@ export default function LoginPage() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (loading) return; // Prevent double submission
     setLoading(true);
 
     try {
-      await authService.login(email, password);
-      toast.success("Login successful!");
-      // Wait for auth state to update before navigating
-      setTimeout(() => navigate("/dashboard"), 500);
+      const result = await authService.login(email, password);
+      if (result?.data?.user) {
+        toast.success("Login successful!");
+        // Navigation happens automatically via App.jsx auth state change
+      }
     } catch (error) {
       toast.error(error.message || "Login failed");
       setLoading(false);
@@ -25,12 +27,14 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
+    if (loading) return; // Prevent double submission
     setLoading(true);
     try {
-      await authService.loginWithGoogle();
-      toast.success("Login successful!");
-      // Wait for auth state to update before navigating
-      setTimeout(() => navigate("/dashboard"), 500);
+      const result = await authService.loginWithGoogle();
+      if (result?.data?.user) {
+        toast.success("Login successful!");
+        // Navigation happens automatically via App.jsx auth state change
+      }
     } catch (error) {
       toast.error(error.message || "Login failed");
       setLoading(false);
@@ -38,28 +42,28 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen flex items-center justify-center px-3 sm:px-4 py-6 sm:py-12">
       {/* Background gradient */}
       <div className="absolute inset-0 -z-10">
-        <div className="absolute top-0 right-1/3 w-96 h-96 bg-purple-500 rounded-full opacity-10 blur-3xl"></div>
-        <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-blue-500 rounded-full opacity-10 blur-3xl"></div>
+        <div className="absolute top-0 right-1/3 w-48 sm:w-96 h-48 sm:h-96 bg-purple-500 rounded-full opacity-10 blur-3xl"></div>
+        <div className="absolute bottom-0 left-1/4 w-48 sm:w-96 h-48 sm:h-96 bg-blue-500 rounded-full opacity-10 blur-3xl"></div>
       </div>
 
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-sm">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold gradient-text mb-2">
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-2">
             Welcome Back!
           </h1>
-          <p className="text-slate-300">Sign in to your account</p>
+          <p className="text-sm sm:text-base text-slate-300">Sign in to your account</p>
         </div>
 
         {/* Login Card */}
-        <div className="glass-lg p-8 mb-6">
-          <form onSubmit={handleLogin} className="space-y-5">
+        <div className="glass-lg p-6 sm:p-8 mb-6">
+          <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
             {/* Email Field */}
             <div>
-              <label className="block text-sm font-semibold text-slate-200 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
                 Email Address
               </label>
               <input
@@ -67,14 +71,14 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-field"
+                className="input-field text-sm"
                 placeholder="your@email.com"
               />
             </div>
 
             {/* Password Field */}
             <div>
-              <label className="block text-sm font-semibold text-slate-200 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
                 Password
               </label>
               <input
@@ -82,13 +86,13 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-field"
+                className="input-field text-sm"
                 placeholder="••••••••"
               />
             </div>
 
             {/* Remember and Forgot */}
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs sm:text-sm">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" className="rounded border-slate-600" />
                 <span className="text-slate-400">Remember me</span>
@@ -105,18 +109,18 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
           {/* Divider */}
-          <div className="relative my-6">
+          <div className="relative my-5 sm:my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-600 border-opacity-30"></div>
             </div>
-            <div className="relative flex justify-center text-sm">
+            <div className="relative flex justify-center text-xs sm:text-sm">
               <span className="px-2 bg-slate-800 bg-opacity-50 text-slate-400">
                 Or continue with
               </span>
@@ -127,9 +131,9 @@ export default function LoginPage() {
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 glass-sm py-3 rounded-xl hover:bg-white hover:bg-opacity-15 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 glass-sm py-2.5 sm:py-3 rounded-xl hover:bg-white hover:bg-opacity-15 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
           >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 sm:w-5 h-4 sm:h-5" fill="currentColor" viewBox="0 0 24 24">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                 fill="#4285F4"
@@ -154,7 +158,7 @@ export default function LoginPage() {
         </div>
 
         {/* Sign Up Link */}
-        <p className="text-center text-slate-400">
+        <p className="text-center text-slate-400 text-xs sm:text-sm">
           Don't have an account?{" "}
           <Link
             to="/signup"

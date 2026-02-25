@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { apiClient } from "@/services/api";
 
@@ -10,7 +11,7 @@ export default function SearchPage() {
     department: "",
     subject: "",
     category: "",
-    semester: 1,
+    semester: "",
   });
   const [recentSearches, setRecentSearches] = useState(() => {
     const saved = localStorage.getItem("recentSearches");
@@ -33,7 +34,15 @@ export default function SearchPage() {
     "AI/ML",
     "Cloud Computing",
   ];
-  const categories = ["Notes", "Assignment", "Solution", "Paper"];
+
+  // Map display names to backend enum values
+  const categories = [
+    { label: "Lecture Notes", value: "lecture-notes" },
+    { label: "Textbooks", value: "textbooks" },
+    { label: "Question Papers", value: "question-papers" },
+    { label: "Assignments", value: "assignments" },
+    { label: "Other", value: "other" },
+  ];
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -47,13 +56,20 @@ export default function SearchPage() {
 
     try {
       // Call backend semantic search API
-      const response = await apiClient.post("/search/semantic", {
+      const response = await apiClient.post("/api/v1/search/semantic", {
         query: searchQuery,
         filters,
         limit: 12,
       });
 
-      setResults(response.data.resources || []);
+      const resources =
+        response.data.data?.resources || response.data.resources || [];
+      // Ensure each resource has an _id field for compatibility
+      const normalizedResources = resources.map((r) => ({
+        ...r,
+        _id: r._id || r.id,
+      }));
+      setResults(normalizedResources);
 
       // Add to recent searches
       const newRecent = [
@@ -63,7 +79,7 @@ export default function SearchPage() {
       setRecentSearches(newRecent);
       localStorage.setItem("recentSearches", JSON.stringify(newRecent));
 
-      if (response.data.resources?.length === 0) {
+      if (normalizedResources.length === 0) {
         toast.error("No resources found. Try different keywords.");
       }
     } catch (error) {
@@ -167,8 +183,8 @@ export default function SearchPage() {
             >
               <option value="">All Categories</option>
               {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
+                <option key={cat.value} value={cat.value}>
+                  {cat.label}
                 </option>
               ))}
             </select>
@@ -177,10 +193,14 @@ export default function SearchPage() {
             <select
               value={filters.semester}
               onChange={(e) =>
-                setFilters({ ...filters, semester: parseInt(e.target.value) })
+                setFilters({
+                  ...filters,
+                  semester: e.target.value ? parseInt(e.target.value) : "",
+                })
               }
               className="input-field text-sm"
             >
+              <option value="">All Semesters</option>
               {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
                 <option key={sem} value={sem}>
                   Semester {sem}
@@ -225,9 +245,10 @@ export default function SearchPage() {
             {results.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {results.map((resource) => (
-                  <div
+                  <Link
                     key={resource._id}
-                    className="card-interactive group"
+                    to={`/resources/${resource._id}`}
+                    className="card-interactive group block"
                   >
                     {/* Thumbnail */}
                     <div className="w-full h-40 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl mb-4 flex items-center justify-center group-hover:shadow-lg">
@@ -258,12 +279,17 @@ export default function SearchPage() {
 
                     {/* Footer */}
                     <div className="flex items-center justify-between text-xs text-slate-400">
-                      <span>📅 {new Date(resource.createdAt).toLocaleDateString()}</span>
-                      <button className="text-blue-400 hover:text-blue-300 font-semibold">
+                      <span>
+                        📅{" "}
+                        {resource.createdAt
+                          ? new Date(resource.createdAt).toLocaleDateString()
+                          : ""}
+                      </span>
+                      <span className="text-blue-400 hover:text-blue-300 font-semibold">
                         View →
-                      </button>
+                      </span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ) : !loading ? (

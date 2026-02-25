@@ -24,6 +24,14 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
+        if (!error.response) {
+          const networkError = new Error(
+            "Cannot connect to backend server at http://localhost:3000. Start backend and try again."
+          );
+          networkError.code = "BACKEND_UNREACHABLE";
+          return Promise.reject(networkError);
+        }
+
         if (error.response?.status === 401) {
           // Handle unauthorized - redirect to login
           localStorage.removeItem('authToken');

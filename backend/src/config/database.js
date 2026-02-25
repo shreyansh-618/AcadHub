@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
-import { GridFSBucket } from 'mongodb';
 import { logger } from './logger.js';
+import Grid from 'gridfs-stream';
 
-let gridFSBucket = null;
+let gfs = null;
 
 export const connectDB = async () => {
   try {
@@ -14,12 +14,10 @@ export const connectDB = async () => {
     await mongoose.connect(mongoUri);
     logger.info('MongoDB connected successfully');
 
-    // Initialize GridFSBucket
+    // Initialize GridFS
     const conn = mongoose.connection;
-    const db = conn.db;
-    gridFSBucket = new GridFSBucket(db, {
-      bucketName: 'uploads',
-    });
+    gfs = Grid(conn.db, mongoose.mongo);
+    gfs.collection('uploads');
 
     // Create indexes
     createIndexes();
@@ -48,8 +46,8 @@ export const disconnectDB = async () => {
 };
 
 export const getGridFS = () => {
-  if (!gridFSBucket) {
+  if (!gfs) {
     throw new Error('GridFS not initialized. Make sure connectDB is called first.');
   }
-  return gridFSBucket;
+  return gfs;
 };

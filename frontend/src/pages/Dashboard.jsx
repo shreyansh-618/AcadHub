@@ -197,26 +197,15 @@ export default function DashboardPage() {
                     <span>❤️ {doc.likes} likes</span>
                   </div>
 
-                  <div className="flex gap-2">
-                    <a 
-                      href={`/resources/${doc._id}/view`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors inline-block text-center text-sm"
-                      title="Open file in new tab"
-                    >
-                      Open
-                    </a>
-                    <a 
-                      href={`http://localhost:3000/api/v1/resources/${doc._id}/download`}
-                      download
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors inline-block text-center text-sm"
-                    >
-                      Download
-                    </a>
-                  </div>
+                  <a 
+                    href={`http://localhost:3000/api/v1/resources/${doc._id}/download`}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors inline-block text-center"
+                  >
+                    Download
+                  </a>
                 </div>
               ))}
             </div>

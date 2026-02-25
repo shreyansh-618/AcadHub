@@ -10,6 +10,7 @@ import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import resourceRoutes from "./routes/resourceRoutes.js";
 import discussionRoutes from "./routes/discussionRoutes.js";
+import searchRoutes from "./routes/searchRoutes.js";
 
 dotenv.config();
 
@@ -20,8 +21,15 @@ const PORT = process.env.PORT || 3000;
 app.use(
   helmet({
     crossOriginOpenerPolicy: false, // Allow Firebase popup auth
-  })
+  }),
 );
+
+// Request logging middleware
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.url}`);
+  next();
+});
+
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -62,7 +70,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/resources", resourceRoutes);
 app.use("/api/v1/discussions", discussionRoutes);
-// app.use('/api/v1/search', searchRoutes);
+app.use("/api/v1/search", searchRoutes);
 // app.use('/api/v1/events', eventRoutes);
 
 // 404 handler

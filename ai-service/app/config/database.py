@@ -12,7 +12,12 @@ async def init_db():
     global db_client, db
     try:
         db_client = AsyncIOMotorClient(settings.mongodb_uri, serverSelectionTimeoutMS=2000)
-        db = db_client.academic_platform
+        # Use 'test' database to match backend (which defaults to 'test' when no DB specified in URI)
+        # or use the database from URI if present
+        try:
+            db = db_client.get_default_database()
+        except Exception:
+            db = db_client.test
         # Try to verify connection but don't fail if unavailable
         try:
             await db_client.admin.command('ping')
