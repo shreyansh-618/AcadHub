@@ -24,6 +24,8 @@ class SearchResult(BaseModel):
     category: str
     department: str
     subject: str
+    semester: Optional[int] = None
+    created_at: Optional[str] = None
 
 class SearchResponse(BaseModel):
     results: List[SearchResult]

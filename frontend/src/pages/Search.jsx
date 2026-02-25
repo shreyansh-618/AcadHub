@@ -309,7 +309,7 @@ export default function SearchPage() {
                       department: "",
                       subject: "",
                       category: "",
-                      semester: 1,
+                      semester: "",
                     });
                   }}
                   className="btn-secondary"

@@ -3,6 +3,76 @@ import { User } from "../models/User.js";
 import { logger } from "../config/logger.js";
 import { getGridFS } from "../config/database.js";
 
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
+
+const syncResourceToSemanticIndex = async (resource) => {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const payload = {
+      resource_id: resource._id.toString(),
+      title: resource.title,
+      description: resource.description || "",
+      content: `${resource.title} ${resource.description || ""}`,
+      department: resource.department || "",
+      subject: resource.subject || "",
+      category: resource.category || "",
+      semester: resource.semester ?? null,
+    };
+
+    const response = await fetch(`${AI_SERVICE_URL}/api/v1/search/index`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => "");
+      logger.warn(
+        `AI indexing failed for resource ${resource._id}: ${response.status} ${errorBody}`,
+      );
+      return;
+    }
+
+    logger.info(`AI index synced for resource: ${resource._id}`);
+  } catch (error) {
+    logger.warn(`AI indexing skipped for resource ${resource._id}: ${error.message}`);
+  }
+};
+
+const removeResourceFromSemanticIndex = async (resourceId) => {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const response = await fetch(
+      `${AI_SERVICE_URL}/api/v1/search/index/${resourceId}`,
+      {
+        method: "DELETE",
+        signal: controller.signal,
+      },
+    );
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => "");
+      logger.warn(
+        `AI de-index failed for resource ${resourceId}: ${response.status} ${errorBody}`,
+      );
+      return;
+    }
+
+    logger.info(`AI index removed for resource: ${resourceId}`);
+  } catch (error) {
+    logger.warn(`AI de-index skipped for resource ${resourceId}: ${error.message}`);
+  }
+};
+
 /**
  * Upload a new resource
  */
@@ -94,6 +164,9 @@ export const uploadResource = async (req, res) => {
       fileSize: req.file.size,
       isApproved: true, // Auto-approve uploads
     });
+
+    // Fire-and-forget AI indexing so uploads stay fast even if AI service is down.
+    void syncResourceToSemanticIndex(resource);
 
     res.status(201).json({
       code: "RESOURCE_CREATED",
@@ -356,6 +429,7 @@ export const deleteResource = async (req, res) => {
     }
 
     await Resource.findByIdAndDelete(id);
+    void removeResourceFromSemanticIndex(id);
 
     res.json({
       code: "SUCCESS",

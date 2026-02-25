@@ -1,9 +1,44 @@
 import express from "express";
 import { logger } from "../config/logger.js";
+import { Resource } from "../models/Resource.js";
 
 const router = express.Router();
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
+
+const fallbackSearch = async ({ query, cleanFilters, limit }) => {
+  const dbFilter = { isApproved: true };
+  if (cleanFilters.department) dbFilter.department = cleanFilters.department;
+  if (cleanFilters.subject) dbFilter.subject = cleanFilters.subject;
+  if (cleanFilters.category) dbFilter.category = cleanFilters.category;
+  if (cleanFilters.semester) dbFilter.semester = cleanFilters.semester;
+
+  const keywordRegex = new RegExp(query.trim(), "i");
+  const fallbackDocs = await Resource.find({
+    ...dbFilter,
+    $or: [
+      { title: keywordRegex },
+      { description: keywordRegex },
+      { subject: keywordRegex },
+    ],
+  })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean();
+
+  return fallbackDocs.map((doc) => ({
+    _id: String(doc._id),
+    title: doc.title,
+    description: doc.description || "",
+    type: doc.type || "",
+    category: doc.category || "",
+    department: doc.department || "",
+    subject: doc.subject || "",
+    score: 0.5,
+    semester: doc.semester,
+    createdAt: doc.createdAt,
+  }));
+};
 
 /**
  * @route   POST /api/v1/search/semantic
@@ -53,9 +88,14 @@ router.post("/semantic", async (req, res) => {
     if (!aiResponse.ok) {
       const errorData = await aiResponse.json().catch(() => ({}));
       logger.error("AI service search error:", errorData);
-      return res.status(aiResponse.status).json({
-        code: "SEARCH_ERROR",
-        message: errorData.detail || "Search service unavailable",
+      const resources = await fallbackSearch({ query, cleanFilters, limit });
+      return res.json({
+        code: "SUCCESS",
+        data: {
+          resources,
+          total: resources.length,
+          processingTime: 0,
+        },
       });
     }
 
@@ -64,7 +104,7 @@ router.post("/semantic", async (req, res) => {
     // Transform AI service response format to what the frontend expects
     // AI service returns: { results: [{ id, title, description, score, ... }], total, ... }
     // Frontend expects: { data: { resources: [{ _id, title, description, ... }] } }
-    const resources = (aiData.results || []).map((result) => ({
+    let resources = (aiData.results || []).map((result) => ({
       _id: result.id,
       title: result.title,
       description: result.description || "",
@@ -76,20 +116,41 @@ router.post("/semantic", async (req, res) => {
       semester: result.semester,
       createdAt: result.created_at,
     }));
+    let usedFallback = false;
+
+    // Safety fallback:
+    // If AI service returns zero materialized resources, fall back to DB text search.
+    // This keeps UX working when embeddings are stale or ID formats mismatch.
+    if (resources.length === 0) {
+      resources = await fallbackSearch({ query, cleanFilters, limit });
+      usedFallback = true;
+    }
 
     res.json({
       code: "SUCCESS",
       data: {
         resources,
-        total: aiData.total || resources.length,
+        total: usedFallback ? resources.length : (aiData.total || resources.length),
         processingTime: aiData.processing_time,
       },
     });
   } catch (error) {
     logger.error("Search proxy error:", error);
-    res.status(500).json({
-      code: "SEARCH_ERROR",
-      message: error.message || "Search failed",
+    const { query = "", filters, limit = 10 } = req.body || {};
+    const cleanFilters = {};
+    if (filters?.department) cleanFilters.department = filters.department;
+    if (filters?.subject) cleanFilters.subject = filters.subject;
+    if (filters?.category) cleanFilters.category = filters.category;
+    if (filters?.semester) cleanFilters.semester = filters.semester;
+
+    const resources = await fallbackSearch({ query, cleanFilters, limit });
+    res.json({
+      code: "SUCCESS",
+      data: {
+        resources,
+        total: resources.length,
+        processingTime: 0,
+      },
     });
   }
 });
