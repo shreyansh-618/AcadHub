@@ -42,7 +42,13 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const result = await authService.signup(name, email, password, role, department);
+      const result = await authService.signup(
+        name,
+        email,
+        password,
+        role,
+        department,
+      );
       if (result?.data?.user) {
         toast.success("Account created successfully! 🎉");
         // Navigation happens automatically via App.jsx auth state change
@@ -79,8 +85,12 @@ export default function SignupPage() {
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-2">Welcome!</h1>
-          <p className="text-sm sm:text-base text-slate-300">Create your account to get started</p>
+          <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-2">
+            Welcome!
+          </h1>
+          <p className="text-sm sm:text-base text-slate-300">
+            Create your account to get started
+          </p>
         </div>
 
         {/* Form Card */}
@@ -213,7 +223,11 @@ export default function SignupPage() {
             disabled={googleLoading}
             className="w-full flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-600 text-slate-200 font-medium hover:bg-slate-700 hover:bg-opacity-50 transition disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
           >
-            <svg className="w-4 sm:w-5 h-4 sm:h-5" viewBox="0 0 24 24" fill="currentColor">
+            <svg
+              className="w-4 sm:w-5 h-4 sm:h-5"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                 fill="#4285F4"
@@ -231,8 +245,12 @@ export default function SignupPage() {
                 fill="#EA4335"
               ></path>
             </svg>
-            <span className="hidden sm:inline">{googleLoading ? "Signing up..." : "Sign up with Google"}</span>
-            <span className="sm:hidden">{googleLoading ? "Signing up..." : "Google"}</span>
+            <span className="hidden sm:inline">
+              {googleLoading ? "Signing up..." : "Sign up with Google"}
+            </span>
+            <span className="sm:hidden">
+              {googleLoading ? "Signing up..." : "Google"}
+            </span>
           </button>
 
           {/* Login Link */}
@@ -247,7 +265,10 @@ export default function SignupPage() {
             </div>
           </div>
 
-          <Link to="/login" className="block w-full text-center btn-ghost text-sm sm:text-base">
+          <Link
+            to="/login"
+            className="block w-full text-center btn-ghost text-sm sm:text-base"
+          >
             Sign In
           </Link>
         </div>

@@ -33,9 +33,9 @@ function AppContent({ user, loading }) {
   // Auto-navigate to dashboard when user logs in
   useEffect(() => {
     if (!loading && user) {
-      const authPages = ['/login', '/signup'];
+      const authPages = ["/login", "/signup"];
       if (authPages.includes(location.pathname)) {
-        navigate('/dashboard', { replace: true });
+        navigate("/dashboard", { replace: true });
       }
     }
   }, [user, loading, location.pathname, navigate]);
@@ -66,31 +66,29 @@ function AppContent({ user, loading }) {
           {/* Auth Routes */}
           <Route
             path="/login"
-            element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />}
+            element={
+              user ? <Navigate to="/dashboard" replace /> : <LoginPage />
+            }
           />
           <Route
             path="/signup"
-            element={user ? <Navigate to="/dashboard" replace /> : <SignupPage />}
+            element={
+              user ? <Navigate to="/dashboard" replace /> : <SignupPage />
+            }
           />
 
           {/* Protected Routes */}
           <Route
             path="/dashboard"
-            element={
-              <ProtectedRoute user={user} element={<DashboardPage />} />
-            }
+            element={<ProtectedRoute user={user} element={<DashboardPage />} />}
           />
           <Route
             path="/profile"
-            element={
-              <ProtectedRoute user={user} element={<ProfilePage />} />
-            }
+            element={<ProtectedRoute user={user} element={<ProfilePage />} />}
           />
           <Route
             path="/resources"
-            element={
-              <ProtectedRoute user={user} element={<ResourcesPage />} />
-            }
+            element={<ProtectedRoute user={user} element={<ResourcesPage />} />}
           />
           <Route
             path="/discussions"
@@ -133,7 +131,7 @@ export default function App() {
           const fetchProfile = async (retryCount = 0) => {
             try {
               const response = await apiClient.get("/api/v1/users/profile");
-              
+
               if (response.status === 200 && response.data?.data?.user) {
                 setUser(response.data.data.user);
                 return true;
@@ -145,38 +143,46 @@ export default function App() {
             } catch (profileError) {
               const status = profileError.response?.status;
               const errorMsg = profileError.message;
-              
+
               // Handle 404 with retries (user creation race condition)
               if (status === 404 && retryCount < 3) {
-                console.info(`Profile not found (attempt ${retryCount + 1}/4). Retrying in 500ms...`);
+                console.info(
+                  `Profile not found (attempt ${retryCount + 1}/4). Retrying in 500ms...`,
+                );
                 // Wait and retry recursively
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise((resolve) => setTimeout(resolve, 500));
                 return fetchProfile(retryCount + 1);
               }
-              
+
               // Handle 401 (invalid token)
               if (status === 401) {
                 if (retryCount < 1 && firebaseUser) {
-                  console.warn("Token rejected. Refreshing token and retrying profile fetch...");
+                  console.warn(
+                    "Token rejected. Refreshing token and retrying profile fetch...",
+                  );
                   const refreshedToken = await firebaseUser.getIdToken(true);
                   localStorage.setItem("authToken", refreshedToken);
                   return fetchProfile(retryCount + 1);
                 }
 
-                console.error("Invalid/expired token after retry. Logging out.");
+                console.error(
+                  "Invalid/expired token after retry. Logging out.",
+                );
                 await authService.logout();
                 setUser(null);
                 return false;
               }
-              
+
               // After max retries on 404
               if (status === 404) {
-                console.error("User profile not found after 4 attempts. Logging out.");
+                console.error(
+                  "User profile not found after 4 attempts. Logging out.",
+                );
                 await authService.logout();
                 setUser(null);
                 return false;
               }
-              
+
               // For other errors, keep user logged in (likely network issues)
               console.warn("Profile fetch error (keeping session):", errorMsg);
               return true;

@@ -1,6 +1,6 @@
-import mongoose from 'mongoose';
-import { logger } from './logger.js';
-import Grid from 'gridfs-stream';
+import mongoose from "mongoose";
+import { logger } from "./logger.js";
+import Grid from "gridfs-stream";
 
 let gfs = null;
 
@@ -8,21 +8,39 @@ export const connectDB = async () => {
   try {
     const mongoUri = process.env.MONGODB_URI;
     if (!mongoUri) {
-      throw new Error('MONGODB_URI environment variable is not defined');
+      throw new Error("MONGODB_URI environment variable is not defined");
     }
 
-    await mongoose.connect(mongoUri);
-    logger.info('MongoDB connected successfully');
+    // Add connection timeout
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    logger.info("MongoDB connected successfully");
 
     // Initialize GridFS
     const conn = mongoose.connection;
     gfs = Grid(conn.db, mongoose.mongo);
-    gfs.collection('uploads');
+    gfs.collection("uploads");
 
     // Create indexes
-    createIndexes();
+    await createIndexes();
   } catch (error) {
-    logger.error('MongoDB connection error:', error);
+    console.error("================================");
+    console.error("❌ MongoDB Connection Error");
+    console.error("================================");
+    console.error("\nError Message:", error.message);
+    console.error("\n📋 To fix this issue:");
+    console.error("1. Go to MongoDB Atlas Console: https://cloud.mongodb.com");
+    console.error("2. Navigate to Network Access (IP Whitelist)");
+    console.error(
+      "3. Add your current IP address or 0.0.0.0/0 for development",
+    );
+    console.error("4. Wait 2-3 minutes for changes to propagate");
+    console.error("5. Try running the backend again");
+    console.error("================================\n");
+
+    logger.error("MongoDB connection error:", error.message);
     process.exit(1);
   }
 };
@@ -30,24 +48,26 @@ export const connectDB = async () => {
 const createIndexes = async () => {
   try {
     // Indexes will be created by models when needed
-    logger.info('Database indexes created');
+    logger.info("Database indexes created");
   } catch (error) {
-    logger.error('Error creating indexes:', error);
+    logger.error("Error creating indexes:", error);
   }
 };
 
 export const disconnectDB = async () => {
   try {
     await mongoose.disconnect();
-    logger.info('MongoDB disconnected');
+    logger.info("MongoDB disconnected");
   } catch (error) {
-    logger.error('Error disconnecting from MongoDB:', error);
+    logger.error("Error disconnecting from MongoDB:", error);
   }
 };
 
 export const getGridFS = () => {
   if (!gfs) {
-    throw new Error('GridFS not initialized. Make sure connectDB is called first.');
+    throw new Error(
+      "GridFS not initialized. Make sure connectDB is called first.",
+    );
   }
   return gfs;
 };
