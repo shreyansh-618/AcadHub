@@ -55,7 +55,7 @@ export default function LoginPage() {
           <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-2">
             Welcome Back!
           </h1>
-          <p className="text-sm sm:text-base text-slate-300">
+          <p className="text-sm sm:text-base text-slate-600">
             Sign in to your account
           </p>
         </div>
@@ -65,7 +65,7 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
             {/* Email Field */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
                 Email Address
               </label>
               <input
@@ -80,7 +80,7 @@ export default function LoginPage() {
 
             {/* Password Field */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
                 Password
               </label>
               <input
@@ -96,12 +96,12 @@ export default function LoginPage() {
             {/* Remember and Forgot */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs sm:text-sm">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="rounded border-slate-600" />
-                <span className="text-slate-400">Remember me</span>
+                <input type="checkbox" className="rounded border-slate-300" />
+                <span className="text-slate-500">Remember me</span>
               </label>
               <a
                 href="#"
-                className="text-blue-400 hover:text-blue-300 transition-colors"
+                className="text-slate-600 hover:text-slate-900 transition-colors"
               >
                 Forgot password?
               </a>
@@ -120,10 +120,10 @@ export default function LoginPage() {
           {/* Divider */}
           <div className="relative my-5 sm:my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-600 border-opacity-30"></div>
+              <div className="w-full border-t border-slate-200"></div>
             </div>
             <div className="relative flex justify-center text-xs sm:text-sm">
-              <span className="px-2 bg-slate-800 bg-opacity-50 text-slate-400">
+              <span className="px-2 bg-white/80 text-slate-500">
                 Or continue with
               </span>
             </div>
@@ -133,7 +133,7 @@ export default function LoginPage() {
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 glass-sm py-2.5 sm:py-3 rounded-xl hover:bg-white hover:bg-opacity-15 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+            className="glass-sm w-full rounded-xl py-2.5 sm:py-3 flex items-center justify-center gap-2 transition-all duration-200 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 text-sm sm:text-base"
           >
             <svg
               className="w-4 sm:w-5 h-4 sm:h-5"
@@ -157,18 +157,18 @@ export default function LoginPage() {
                 fill="#EA4335"
               />
             </svg>
-            <span className="text-slate-100 font-medium">
+            <span className="font-medium text-slate-800">
               {loading ? "Loading..." : "Google"}
             </span>
           </button>
         </div>
 
         {/* Sign Up Link */}
-        <p className="text-center text-slate-400 text-xs sm:text-sm">
+        <p className="text-center text-slate-500 text-xs sm:text-sm">
           Don't have an account?{" "}
           <Link
             to="/signup"
-            className="text-blue-400 hover:text-blue-300 font-semibold transition-colors"
+            className="text-slate-700 hover:text-slate-950 font-semibold transition-colors"
           >
             Sign up here
           </Link>

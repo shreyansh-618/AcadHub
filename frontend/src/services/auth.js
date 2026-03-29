@@ -48,7 +48,7 @@ export const authService = {
       localStorage.setItem('authToken', idToken);
 
       // Create user profile on backend
-      const response = await apiClient.post('/api/v1/auth/signup', {
+      const response = await apiClient.post('/auth/signup', {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         name,
@@ -74,7 +74,7 @@ export const authService = {
       localStorage.setItem('authToken', idToken);
 
       // Create or get user profile on backend
-      const response = await apiClient.post('/api/v1/auth/google', {
+      const response = await apiClient.post('/auth/google', {
         uid: result.user.uid,
         email: result.user.email,
         name: result.user.displayName || 'User',
@@ -103,7 +103,7 @@ export const authService = {
       localStorage.setItem('authToken', idToken);
 
       // Get user profile from backend
-      const response = await apiClient.post('/api/v1/auth/login', {
+      const response = await apiClient.post('/auth/login', {
         uid: firebaseUser.uid,
       });
 
@@ -125,7 +125,7 @@ export const authService = {
       localStorage.setItem('authToken', idToken);
 
       // Get or create user profile on backend
-      const response = await apiClient.post('/api/v1/auth/google', {
+      const response = await apiClient.post('/auth/google', {
         uid: result.user.uid,
         email: result.user.email,
         name: result.user.displayName || 'User',

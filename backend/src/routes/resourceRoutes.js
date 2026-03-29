@@ -5,9 +5,12 @@ import {
   getUserResources,
   getUserLikedResources,
   getResourceById,
+  generateResourceSummary,
   likeResource,
   deleteResource,
   downloadResource,
+  updateResourceTags,
+  viewResource,
 } from '../controllers/resourceController.js';
 import { authMiddleware } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
@@ -50,11 +53,32 @@ router.get('/my-likes', authMiddleware, getUserLikedResources);
 router.get('/:id/download', downloadResource);
 
 /**
+ * @route   GET /api/v1/resources/:id/view
+ * @desc    View resource file inline
+ * @access  Public
+ */
+router.get('/:id/view', viewResource);
+
+/**
  * @route   GET /api/v1/resources/:id
  * @desc    Get resource by ID
  * @access  Public
  */
 router.get('/:id', getResourceById);
+
+/**
+ * @route   POST /api/v1/resources/:id/generate-summary
+ * @desc    Generate and cache an AI summary for a resource
+ * @access  Private
+ */
+router.post('/:id/generate-summary', authMiddleware, generateResourceSummary);
+
+/**
+ * @route   PATCH /api/v1/resources/:id/tags
+ * @desc    Update resource tags
+ * @access  Private
+ */
+router.patch('/:id/tags', authMiddleware, updateResourceTags);
 
 /**
  * @route   POST /api/v1/resources/:id/like

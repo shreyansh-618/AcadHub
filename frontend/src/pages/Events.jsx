@@ -90,26 +90,26 @@ export default function Events() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-12 px-4">
+    <div className="page-shell">
       <div className="container-max">
         {/* Header */}
-        <div className="mb-12">
+        <div className="glass-panel mb-12 p-8">
           <h1 className="text-3xl md:text-4xl font-bold gradient-text mb-2">
             Upcoming Events
           </h1>
-          <p className="text-slate-400 text-sm md:text-base">
+          <p className="text-slate-600 text-sm md:text-base">
             Stay updated with the latest workshops, seminars, and conferences
           </p>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-8 border-b border-slate-700">
+        <div className="mb-8 flex gap-4 border-b border-slate-200">
           <button
             onClick={() => setActiveTab('upcoming')}
             className={`pb-3 px-4 font-semibold transition-colors ${
               activeTab === 'upcoming'
-                ? 'text-blue-400 border-b-2 border-blue-400'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'text-slate-900 border-b-2 border-slate-700'
+                : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             Upcoming Events
@@ -118,8 +118,8 @@ export default function Events() {
             onClick={() => setActiveTab('past')}
             className={`pb-3 px-4 font-semibold transition-colors ${
               activeTab === 'past'
-                ? 'text-blue-400 border-b-2 border-blue-400'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'text-slate-900 border-b-2 border-slate-700'
+                : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             Past Events
@@ -131,16 +131,16 @@ export default function Events() {
           {events.map((event) => (
             <div
               key={event.id}
-              className="group bg-slate-800 rounded-lg border border-slate-700 hover:border-blue-500 transition-all duration-300 overflow-hidden hover:shadow-xl hover:shadow-blue-500/20"
+              className="group overflow-hidden rounded-[28px] border border-slate-200 bg-white/75 shadow-[0_18px_50px_rgba(91,101,118,0.08)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_24px_70px_rgba(91,101,118,0.14)]"
             >
               {/* Image */}
-              <div className="relative h-48 md:h-40 overflow-hidden bg-slate-700">
+              <div className="relative h-48 overflow-hidden bg-slate-200 md:h-40">
                 <img
                   src={event.image}
                   alt={event.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
-                <div className="absolute inset-0 bg-black bg-opacity-30 group-hover:bg-opacity-20 transition-all duration-300" />
+                <div className="absolute inset-0 bg-slate-900/10 transition-all duration-300 group-hover:bg-slate-900/5" />
                 <span className={`absolute top-4 right-4 text-xs font-semibold px-3 py-1 rounded-full ${getCategoryColor(event.category)} dark:${getCategoryColor(event.category)}`}>
                   {event.category}
                 </span>
@@ -148,31 +148,31 @@ export default function Events() {
 
               {/* Content */}
               <div className="p-5">
-                <h3 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors mb-3 line-clamp-2">
+                <h3 className="mb-3 line-clamp-2 text-xl font-bold text-slate-900 transition-colors group-hover:text-slate-700">
                   {event.title}
                 </h3>
 
                 {/* Description */}
-                <p className="text-sm text-slate-400 mb-4 line-clamp-2">
+                <p className="mb-4 line-clamp-2 text-sm text-slate-600">
                   {event.description}
                 </p>
 
                 {/* Details */}
-                <div className="space-y-2 text-sm text-slate-400 mb-4 border-t border-slate-700 pt-4">
+                <div className="mb-4 space-y-2 border-t border-slate-200 pt-4 text-sm text-slate-600">
                   <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-blue-400" />
+                    <Calendar className="w-4 h-4 text-slate-500" />
                     <span>{new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-purple-400" />
+                    <Clock className="w-4 h-4 text-slate-500" />
                     <span>{event.time}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-pink-400" />
+                    <MapPin className="w-4 h-4 text-slate-500" />
                     <span className="truncate">{event.location}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-green-400" />
+                    <Users className="w-4 h-4 text-slate-500" />
                     <span>{event.attendees} attendees</span>
                   </div>
                 </div>
@@ -189,16 +189,16 @@ export default function Events() {
         {/* Empty State */}
         {events.length === 0 && (
           <div className="text-center py-12">
-            <div className="text-slate-400 text-lg">No events found</div>
+            <div className="text-slate-600 text-lg">No events found</div>
           </div>
         )}
 
         {/* CTA Section */}
-        <div className="mt-16 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-slate-700 rounded-lg p-8 md:p-12 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+        <div className="glass-lg mt-16 p-8 text-center md:p-12">
+          <h2 className="mb-4 text-2xl font-bold text-slate-900 md:text-3xl">
             Want to host an event?
           </h2>
-          <p className="text-slate-400 mb-6 max-w-2xl mx-auto">
+          <p className="mx-auto mb-6 max-w-2xl text-slate-600">
             Share your knowledge and connect with fellow students. Submit your event proposal today.
           </p>
           <button className="btn-primary">

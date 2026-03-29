@@ -1,289 +1,247 @@
-# Academic Platform - Complete Project
+# Smart — AI-Powered Academic Intelligence Platform
 
-An AI-powered academic resource management system designed to centralize academic materials, enable intelligent discovery, and promote collaborative learning among students and educators.
+Smart is a full-stack, multi-service academic platform designed to centralize fragmented academic workflows into a single intelligent system.
 
-**Status:** Production Ready
-
----
-
-## Overview
-
-This platform provides a unified environment for managing academic resources, conducting semantic searches using AI, and enabling peer-to-peer collaboration through discussions and knowledge sharing.
-
-The system combines modern web technologies with machine learning–based semantic retrieval to improve how academic content is organized, discovered, and consumed.
+It enables students and educators to store, search, and interact with academic content using AI-powered semantic understanding, real-time collaboration, and cross-platform accessibility (web + mobile).
 
 ---
 
-## Key Features
+## Why This Exists
 
-### Authentication and Access Control
+Academic content is fundamentally broken across institutions:
 
-* Secure email and password authentication
-* Google OAuth integration
-* JWT-based session management
-* Protected routes
-* Role-based authorization
+- Resources are scattered across WhatsApp groups, Google Drive, emails, and LMS portals
+- Traditional search fails because it relies on exact keywords instead of meaning
+- Discussions are disconnected from actual study material
+- There is no unified system for managing academic workflows
 
-### AI-Powered Semantic Search
-
-* Natural language academic search
-* Vector embeddings using Sentence-BERT
-* Cosine similarity–based retrieval
-* Advanced filtering by department, subject, category, and semester
-* Recent search tracking
-
-### Resource Management
-
-* Centralized academic resource repository
-* Structured metadata management
-* File upload and storage support
-* Organized academic categorization
-
-### Collaborative Discussions
-
-* Academic Q&A forums
-* Peer learning and knowledge exchange
-* Resource-linked discussions
-* Community-driven answer validation
-
-### Event and Announcement Management
-
-* Academic event creation and management
-* Calendar-based scheduling
-* Assignment and examination tracking
-* Notification-ready architecture
-
-### User Experience
-
-* Consistent dark theme design
-* Glassmorphic UI components
-* Responsive layout across devices
-* Accessible and touch-friendly interface
-* Smooth transitions and animations
+Smart solves this by combining content storage, semantic search, collaboration, and AI processing into one platform.
 
 ---
 
-## Technology Stack
+## Key Capabilities
+
+### Intelligent Resource Management
+
+- Upload, organize, and retrieve academic content in a centralized system
+- Metadata-driven storage with structured indexing
+
+### Semantic Search (Core Feature)
+
+- Meaning-based search using transformer models
+- Retrieves relevant documents without exact keyword matches
+- Powered by sentence embeddings and similarity scoring
+
+### AI Document Intelligence
+
+- Processes and analyzes academic documents via a dedicated AI service
+- Enables contextual understanding of uploaded content
+
+### Real-Time Collaboration
+
+- Discussion threads and Q&A linked directly to resources
+- WebSocket-based real-time updates using Socket.io
+
+### Authentication & Access Control
+
+- Firebase Authentication (Email/Password + Google Sign-In)
+- Backend verification using Firebase Admin SDK
+- Extensible role-based access system
+
+### Cross-Platform Experience
+
+- Responsive web application (React)
+- Mobile application (React Native + Expo)
+- Unified experience across devices
+
+---
+
+## System Architecture
+
+```
+Client Layer
+ ├── Web (React + Vite)
+ └── Mobile (React Native + Expo)
+
+Backend Layer
+ └── Node.js + Express API
+     ├── Auth & User Management
+     ├── Resource Management
+     ├── Realtime Services (Socket.io)
+
+AI Layer
+ └── FastAPI Service
+     ├── Embedding Generation (Sentence Transformers)
+     └── Semantic Search Processing
+
+Database Layer
+ └── MongoDB (Mongoose ODM)
+```
+
+---
+
+## Tech Stack
 
 ### Frontend
 
-* React 18
-* Vite
-* Tailwind CSS
-* React Router
-* Axios
-* Zustand
-* Firebase Authentication
+- React (Vite)
+- Tailwind CSS
+- Zustand
+- React Router
 
 ### Backend
 
-* Node.js
-* Express.js
-* MongoDB Atlas
-* Mongoose
-* Firebase Admin SDK
-* Socket.io
-* Pino Logging
+- Node.js
+- Express.js
+- MongoDB + Mongoose
+- Socket.io
+- Firebase Admin SDK
 
 ### AI Service
 
-* FastAPI
-* Uvicorn
-* Sentence-Transformers
-* PyTorch
-* Motor (Async MongoDB Driver)
-* NumPy and SciPy
+- FastAPI
+- Sentence Transformers
+- PyTorch
+
+### Mobile
+
+- React Native
+- Expo
+- Firebase Auth
+- Zustand
 
 ---
 
-## Architecture Overview
+## Repository Structure
 
-The application follows a distributed service architecture:
-
-* React frontend communicates with the Express backend via REST APIs.
-* Authentication and user validation are handled through Firebase services.
-* MongoDB stores application data and vector embeddings.
-* A dedicated FastAPI-based AI service processes semantic search queries using embedding models.
-* Vector similarity search enables intelligent academic resource discovery.
-
----
-
-## Quick Start
-
-### 1. Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
+```
+smart/
+├── frontend/        # React web client
+├── backend/         # Express API server
+├── ai-service/      # FastAPI AI microservice
+├── mobile-app/      # React Native (Expo)
+├── docker-compose.yml
+└── QUICKSTART.md
 ```
 
-Frontend runs at:
-[http://localhost:5174](http://localhost:5174)
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- Python 3.9+
+- MongoDB (Atlas recommended)
+- Firebase Project
 
 ---
 
-### 2. Backend
+### Setup
 
-```bash
-cd backend
-npm install
-npm run dev
+#### 1. Clone Repository
+
+```
+git clone <repo-url>
+cd smart
 ```
 
-Backend runs at:
-[http://localhost:3000](http://localhost:3000)
+#### 2. Install Dependencies
 
----
+```
+# frontend
+cd frontend && npm install
 
-### 3. AI Service
+# mobile-app
+cd mobile-app && npm install
 
-```bash
-cd ai-service
+# backend
+cd ../backend && npm install
+
+# AI service
+cd ../ai-service
 python -m venv venv
-source venv/bin/activate
+venv\Scripts\activate
 pip install -r requirements.txt
+```
+
+---
+
+#### 3. Environment Configuration
+
+Create `.env` files using provided templates:
+
+Frontend:
+
+- VITE_API_URL
+- VITE_AI_SERVICE_URL
+
+Backend:
+
+- MONGODB_URI
+- JWT_SECRET
+- Firebase credentials
+
+AI Service:
+
+- Model configs + API keys
+
+Mobile:
+
+- EXPO_PUBLIC_API_URL
+- EXPO_PUBLIC_AI_SERVICE_URL
+
+---
+
+#### 4. Run Services
+
+```
+# frontend
+npm run dev
+
+# backend
+npm run dev
+
+# ai-service
 python main.py
-```
 
-AI service runs at:
-[http://localhost:8000](http://localhost:8000)
-
----
-
-## Environment Configuration
-
-Create environment configuration files based on the provided examples.
-
-### Required Variables
-
-* `MONGODB_URI` — MongoDB connection string
-* `FIREBASE_CONFIG` — Firebase configuration credentials
-* `JWT_SECRET` — Token signing secret
-* `VITE_API_URL` — Backend API endpoint
-
----
-
-## API Overview
-
-### Authentication
-
-* `POST /api/v1/auth/signup`
-* `POST /api/v1/auth/login`
-* `POST /api/v1/auth/logout`
-
-### Resources
-
-* `GET /api/v1/resources`
-* `POST /api/v1/resources`
-* `DELETE /api/v1/resources/:id`
-
-### Semantic Search
-
-* `POST /api/v1/search/semantic`
-
-### Discussions
-
-* `GET /api/v1/discussions`
-* `POST /api/v1/discussions`
-* `POST /api/v1/discussions/:id/answers`
-
-### Events
-
-* `GET /api/v1/events`
-* `POST /api/v1/events`
-
----
-
-## Performance Metrics
-
-* Optimized frontend bundle size (~300 KB gzipped)
-* Average API response time under 200 ms
-* Semantic search response between 1–5 seconds
-* Embedding model initialization cached after first load
-
----
-
-## Testing
-
-### Frontend Testing
-
-```bash
-cd frontend
-npm run test
-```
-
-### Backend Testing
-
-```bash
-cd backend
-npm run test
-```
-
-### AI Service Testing
-
-```bash
-cd ai-service
-pytest tests/
+# mobile
+npm start
 ```
 
 ---
 
-## Deployment
+## Local Development URLs
 
-The platform supports production deployment using containerized or cloud-based environments.
-
-Supported approaches include:
-
-* Docker-based deployment
-* Kubernetes orchestration
-* Cloud deployment on Azure, AWS, or similar platforms
-
-Refer to deployment documentation for infrastructure configuration and scaling guidelines.
+- Frontend → http://localhost:5173
+- Backend → http://localhost:3000
+- AI Service → http://localhost:8000
 
 ---
 
-## Security Practices
+## Strengths of This Project
 
-* Token-based authentication
-* Backend authorization middleware
-* Environment-based configuration management
-* Structured error handling
-* Secure API communication patterns
-
----
-
-## Database Design
-
-Primary collections include:
-
-* Users
-* Resources
-* Discussions
-* Answers
-* Events
-* Embeddings
-* File storage (GridFS)
+- Multi-service architecture
+- AI-driven semantic search with real use-case
+- Real-time communication using WebSockets
+- Cross-platform system (web + mobile)
+- Clean separation of concerns
 
 ---
 
-## Contribution Guidelines
+## Current Limitations
 
-* Follow established coding standards
-* Use feature branches derived from `main`
-* Submit pull requests with clear documentation
-* Ensure testing coverage for new features
-
----
-
-## License
-
-MIT License
+- No vector database integration
+- Limited scalability testing
+- No caching layer (Redis/Dragonfly not implemented)
+- Deployment pipeline not fully optimized
 
 ---
 
-## Project Information
+## Future Improvements
 
-**Version:** 1.0.0-alpha
-**Release:** February 2026
-**Category:** AI-Powered Academic Collaboration Platform
+- Integrate vector database (FAISS / Pinecone / Weaviate)
+- Add caching layer for performance optimization
+- Improve semantic ranking quality
+- Implement CI/CD pipeline
+- Introduce role-based dashboards

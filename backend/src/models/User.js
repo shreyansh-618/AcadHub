@@ -26,6 +26,8 @@ const userSchema = new mongoose.Schema(
       index: true,
     },
     department: String,
+    university: String,
+    semester: Number,
     avatar: String,
     bio: String,
     isActive: {

@@ -34,8 +34,6 @@ export default function SearchPage() {
     "AI/ML",
     "Cloud Computing",
   ];
-
-  // Map display names to backend enum values
   const categories = [
     { label: "Lecture Notes", value: "lecture-notes" },
     { label: "Textbooks", value: "textbooks" },
@@ -55,8 +53,7 @@ export default function SearchPage() {
     setLoading(true);
 
     try {
-      // Call backend semantic search API
-      const response = await apiClient.post("/api/v1/search/semantic", {
+      const response = await apiClient.post("/search/semantic", {
         query: searchQuery,
         filters,
         limit: 12,
@@ -64,17 +61,30 @@ export default function SearchPage() {
 
       const resources =
         response.data.data?.resources || response.data.resources || [];
-      // Ensure each resource has an _id field for compatibility
-      const normalizedResources = resources.map((r) => ({
-        ...r,
-        _id: r._id || r.id,
+      const normalizedResources = resources.map((resource) => ({
+        ...resource,
+        _id: resource._id || resource.id,
       }));
       setResults(normalizedResources);
 
-      // Add to recent searches
+      apiClient
+        .post("/analytics/track", {
+          type: "search",
+          topicName: filters.subject || null,
+          searchQuery,
+          metadata: {
+            subject: filters.subject || null,
+            category: filters.category || null,
+            department: filters.department || null,
+            semester: filters.semester || null,
+            deviceType: "web",
+          },
+        })
+        .catch(() => {});
+
       const newRecent = [
         searchQuery,
-        ...recentSearches.filter((s) => s !== searchQuery),
+        ...recentSearches.filter((term) => term !== searchQuery),
       ].slice(0, 5);
       setRecentSearches(newRecent);
       localStorage.setItem("recentSearches", JSON.stringify(newRecent));
@@ -94,31 +104,22 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen py-12">
-      {/* Background gradient */}
+    <div className="page-shell py-12">
       <div className="absolute inset-0 -z-10">
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500 rounded-full opacity-10 blur-3xl"></div>
-        <div className="absolute bottom-0 left-1/3 w-96 h-96 bg-blue-500 rounded-full opacity-10 blur-3xl"></div>
+        <div className="absolute right-1/4 top-10 h-80 w-80 rounded-full bg-slate-300/25 blur-3xl" />
+        <div className="absolute bottom-10 left-1/3 h-80 w-80 rounded-full bg-slate-200/35 blur-3xl" />
       </div>
 
       <div className="container-max">
-        {/* Header */}
         <div className="mb-12">
-          <h1 className="text-5xl font-bold gradient-text mb-3">
-            Semantic Search
-          </h1>
-          <p className="text-slate-300 text-lg">
+          <h1 className="mb-3 text-5xl font-bold gradient-text">Semantic Search</h1>
+          <p className="text-lg text-slate-600">
             Find resources using AI-powered semantic understanding
           </p>
         </div>
 
-        {/* Search Form */}
-        <form
-          onSubmit={handleSearch}
-          className="glass-lg p-8 mb-8 sticky top-4 z-10"
-        >
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-            {/* Search Input */}
+        <form onSubmit={handleSearch} className="glass-lg sticky top-20 z-10 mb-8 p-8">
+          <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-4">
             <div className="lg:col-span-2">
               <input
                 type="text"
@@ -129,7 +130,6 @@ export default function SearchPage() {
               />
             </div>
 
-            {/* Department Filter */}
             <select
               value={filters.department}
               onChange={(e) =>
@@ -138,26 +138,23 @@ export default function SearchPage() {
               className="input-field"
             >
               <option value="">All Departments</option>
-              {departments.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
+              {departments.map((department) => (
+                <option key={department} value={department}>
+                  {department}
                 </option>
               ))}
             </select>
 
-            {/* Search Button */}
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary disabled:opacity-50 w-full"
+              className="btn-primary w-full disabled:opacity-50"
             >
               {loading ? "Searching..." : "Search"}
             </button>
           </div>
 
-          {/* Additional Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Subject Filter */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <select
               value={filters.subject}
               onChange={(e) =>
@@ -166,14 +163,13 @@ export default function SearchPage() {
               className="input-field text-sm"
             >
               <option value="">All Subjects</option>
-              {subjects.map((subj) => (
-                <option key={subj} value={subj}>
-                  {subj}
+              {subjects.map((subject) => (
+                <option key={subject} value={subject}>
+                  {subject}
                 </option>
               ))}
             </select>
 
-            {/* Category Filter */}
             <select
               value={filters.category}
               onChange={(e) =>
@@ -182,14 +178,13 @@ export default function SearchPage() {
               className="input-field text-sm"
             >
               <option value="">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat.value} value={cat.value}>
-                  {cat.label}
+              {categories.map((category) => (
+                <option key={category.value} value={category.value}>
+                  {category.label}
                 </option>
               ))}
             </select>
 
-            {/* Semester Filter */}
             <select
               value={filters.semester}
               onChange={(e) =>
@@ -201,19 +196,18 @@ export default function SearchPage() {
               className="input-field text-sm"
             >
               <option value="">All Semesters</option>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-                <option key={sem} value={sem}>
-                  Semester {sem}
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((semester) => (
+                <option key={semester} value={semester}>
+                  Semester {semester}
                 </option>
               ))}
             </select>
           </div>
         </form>
 
-        {/* Recent Searches */}
         {!searchQuery && recentSearches.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-lg font-semibold text-slate-200 mb-4">
+            <h3 className="mb-4 text-lg font-semibold text-slate-800">
               Recent Searches
             </h3>
             <div className="flex flex-wrap gap-3">
@@ -221,7 +215,7 @@ export default function SearchPage() {
                 <button
                   key={term}
                   onClick={() => handleQuickSearch(term)}
-                  className="badge badge-primary hover:bg-blue-400 hover:bg-opacity-40 cursor-pointer"
+                  className="badge badge-primary cursor-pointer hover:bg-slate-200"
                 >
                   {term}
                 </button>
@@ -230,42 +224,37 @@ export default function SearchPage() {
           </div>
         )}
 
-        {/* Results Section */}
         {searchQuery && (
           <div>
             <div className="mb-6">
-              <p className="text-slate-300">
+              <p className="text-slate-600">
                 {loading
                   ? "Searching..."
                   : `Found ${results.length} result${results.length !== 1 ? "s" : ""}`}
               </p>
             </div>
 
-            {/* Results Grid */}
             {results.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {results.map((resource) => (
                   <Link
                     key={resource._id}
                     to={`/resources/${resource._id}`}
                     className="card-interactive group block"
                   >
-                    {/* Thumbnail */}
-                    <div className="w-full h-40 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl mb-4 flex items-center justify-center group-hover:shadow-lg">
-                      <span className="text-white text-4xl">📄</span>
+                    <div className="mb-4 flex h-40 w-full items-center justify-center rounded-[24px] bg-[linear-gradient(135deg,rgba(214,219,226,0.92),rgba(245,246,247,0.96))]">
+                      <span className="text-4xl text-slate-700">DOC</span>
                     </div>
 
-                    {/* Content */}
-                    <h3 className="text-lg font-bold text-white mb-2 line-clamp-2">
+                    <h3 className="mb-2 line-clamp-2 text-lg font-bold text-slate-900">
                       {resource.title}
                     </h3>
 
-                    <p className="text-slate-300 text-sm mb-3 line-clamp-2">
+                    <p className="mb-3 line-clamp-2 text-sm text-slate-600">
                       {resource.description}
                     </p>
 
-                    {/* Metadata */}
-                    <div className="flex flex-wrap gap-2 mb-4">
+                    <div className="mb-4 flex flex-wrap gap-2">
                       <span className="badge badge-primary text-xs">
                         {resource.category}
                       </span>
@@ -277,15 +266,13 @@ export default function SearchPage() {
                       </span>
                     </div>
 
-                    {/* Footer */}
-                    <div className="flex items-center justify-between text-xs text-slate-400">
+                    <div className="flex items-center justify-between text-xs text-slate-500">
                       <span>
-                        📅{" "}
                         {resource.createdAt
                           ? new Date(resource.createdAt).toLocaleDateString()
                           : ""}
                       </span>
-                      <span className="text-blue-400 hover:text-blue-300 font-semibold">
+                      <span className="font-semibold text-slate-700 transition-colors group-hover:text-slate-900">
                         View →
                       </span>
                     </div>
@@ -293,12 +280,12 @@ export default function SearchPage() {
                 ))}
               </div>
             ) : !loading ? (
-              <div className="text-center py-16">
-                <div className="text-6xl mb-4">🔍</div>
-                <h3 className="text-2xl font-bold text-slate-200 mb-2">
+              <div className="glass-lg py-16 text-center">
+                <div className="mb-4 text-6xl">⌕</div>
+                <h3 className="mb-2 text-2xl font-bold text-slate-900">
                   No Results Found
                 </h3>
-                <p className="text-slate-400 mb-6">
+                <p className="mb-6 text-slate-600">
                   Try adjusting your search query or filters
                 </p>
                 <button
@@ -321,16 +308,15 @@ export default function SearchPage() {
           </div>
         )}
 
-        {/* Initial State */}
         {!searchQuery && results.length === 0 && (
-          <div className="text-center py-20">
-            <div className="text-8xl mb-6 float">🚀</div>
-            <h2 className="text-3xl font-bold gradient-text mb-3">
+          <div className="glass-lg py-20 text-center">
+            <div className="mb-6 text-7xl">⌕</div>
+            <h2 className="mb-3 text-3xl font-bold gradient-text">
               Ready to Search?
             </h2>
-            <p className="text-slate-300 text-lg max-w-md mx-auto">
+            <p className="mx-auto max-w-md text-lg text-slate-600">
               Use the search bar above to find resources that match your needs.
-              Our AI understands context and meaning, not just keywords.
+              The assistant understands context and meaning, not just keywords.
             </p>
           </div>
         )}

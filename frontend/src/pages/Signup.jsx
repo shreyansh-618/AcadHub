@@ -88,7 +88,7 @@ export default function SignupPage() {
           <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-2">
             Welcome!
           </h1>
-          <p className="text-sm sm:text-base text-slate-300">
+          <p className="text-sm sm:text-base text-slate-600">
             Create your account to get started
           </p>
         </div>
@@ -98,7 +98,7 @@ export default function SignupPage() {
           <form onSubmit={handleSignup} className="space-y-4 sm:space-y-5">
             {/* Name Field */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
                 Full Name
               </label>
               <input
@@ -113,7 +113,7 @@ export default function SignupPage() {
 
             {/* Email Field */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
                 Email Address
               </label>
               <input
@@ -128,7 +128,7 @@ export default function SignupPage() {
 
             {/* Role Selection */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
                 Role
               </label>
               <select
@@ -144,7 +144,7 @@ export default function SignupPage() {
 
             {/* Department Selection */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
                 Department
               </label>
               <select
@@ -163,7 +163,7 @@ export default function SignupPage() {
 
             {/* Password Field */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
                 Password
               </label>
               <input
@@ -174,14 +174,14 @@ export default function SignupPage() {
                 placeholder="••••••••"
                 required
               />
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 At least 6 characters
               </p>
             </div>
 
             {/* Confirm Password Field */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-200 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
                 Confirm Password
               </label>
               <input
@@ -207,10 +207,10 @@ export default function SignupPage() {
           {/* Divider */}
           <div className="relative my-5 sm:my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-600 border-opacity-30"></div>
+              <div className="w-full border-t border-slate-200"></div>
             </div>
             <div className="relative flex justify-center text-xs sm:text-sm">
-              <span className="px-2 bg-slate-800 bg-opacity-50 text-slate-400">
+              <span className="px-2 bg-white/80 text-slate-500">
                 Or continue with
               </span>
             </div>
@@ -221,7 +221,7 @@ export default function SignupPage() {
             type="button"
             onClick={handleGoogleSignup}
             disabled={googleLoading}
-            className="w-full flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-600 text-slate-200 font-medium hover:bg-slate-700 hover:bg-opacity-50 transition disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
+            className="w-full flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-200 text-slate-800 font-medium hover:bg-white transition disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
           >
             <svg
               className="w-4 sm:w-5 h-4 sm:h-5"
@@ -256,10 +256,10 @@ export default function SignupPage() {
           {/* Login Link */}
           <div className="relative my-5 sm:my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-600 border-opacity-30"></div>
+              <div className="w-full border-t border-slate-200"></div>
             </div>
             <div className="relative flex justify-center text-xs sm:text-sm">
-              <span className="px-2 bg-slate-800 bg-opacity-50 text-slate-400">
+              <span className="px-2 bg-white/80 text-slate-500">
                 Already have an account?
               </span>
             </div>
@@ -274,13 +274,13 @@ export default function SignupPage() {
         </div>
 
         {/* Terms */}
-        <p className="text-center text-xs text-slate-400 mt-6">
+        <p className="text-center text-xs text-slate-500 mt-6">
           By signing up, you agree to our{" "}
-          <a href="#" className="text-blue-400 hover:text-blue-300">
+          <a href="#" className="text-slate-700 hover:text-slate-950">
             Terms of Service
           </a>{" "}
           and{" "}
-          <a href="#" className="text-blue-400 hover:text-blue-300">
+          <a href="#" className="text-slate-700 hover:text-slate-950">
             Privacy Policy
           </a>
         </p>

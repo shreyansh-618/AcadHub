@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 import logging
-from app.routes import health, search
+from app.routes import health, search, qa, document_intelligence, embed
 from app.config.database import init_db
 
 # Configure logging
@@ -26,7 +26,12 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("CORS_ORIGIN", "http://localhost:5173")],
+    allow_origins=[
+        os.getenv("CORS_ORIGIN", "http://localhost:5173"),
+        "http://localhost:5000",
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -54,6 +59,9 @@ async def startup_event():
 # Include routes
 app.include_router(health.router)
 app.include_router(search.router)
+app.include_router(qa.router)
+app.include_router(document_intelligence.router)
+app.include_router(embed.router)
 
 if __name__ == "__main__":
     import uvicorn

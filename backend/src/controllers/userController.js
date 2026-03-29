@@ -27,6 +27,8 @@ export const getProfile = async (req, res) => {
           name: user.name,
           role: user.role,
           department: user.department,
+          university: user.university,
+          semester: user.semester,
           avatar: user.avatar,
           bio: user.bio,
           isActive: user.isActive,
@@ -51,7 +53,7 @@ export const getProfile = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const user = req.user; // Get user from auth middleware
-    const { name, bio, avatar, department } = req.body;
+    const { name, bio, avatar, department, university, semester } = req.body;
 
     if (!user) {
       return res.status(401).json({
@@ -66,6 +68,12 @@ export const updateProfile = async (req, res) => {
     if (bio) updateData.bio = bio;
     if (avatar) updateData.avatar = avatar;
     if (department) updateData.department = department;
+    if (university) updateData.university = university;
+    if (semester !== undefined) {
+      updateData.semester = Number.isFinite(Number(semester))
+        ? Number(semester)
+        : semester;
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
       user._id,
@@ -93,6 +101,8 @@ export const updateProfile = async (req, res) => {
           name: updatedUser.name,
           role: updatedUser.role,
           department: updatedUser.department,
+          university: updatedUser.university,
+          semester: updatedUser.semester,
           avatar: updatedUser.avatar,
           bio: updatedUser.bio,
           isActive: updatedUser.isActive,
@@ -135,6 +145,8 @@ export const getUserById = async (req, res) => {
           name: user.name,
           role: user.role,
           department: user.department,
+          university: user.university,
+          semester: user.semester,
           avatar: user.avatar,
           bio: user.bio,
         },

@@ -1,0 +1,369 @@
+.qa-interface {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  background: linear-gradient(160deg, #fffdf8 0%, #f3f7fb 100%);
+  border-radius: 24px;
+  border: 1px solid #dbe5f0;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+}
+
+.qa-form,
+.qa-response,
+.qa-thinking-card {
+  width: 100%;
+}
+
+.qa-input-wrapper,
+.qa-response,
+.qa-thinking-card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #d8e2ec;
+  border-radius: 20px;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.06);
+}
+
+.qa-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.qa-input {
+  width: 100%;
+  min-height: 88px;
+  padding: 1rem;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  color: #0f172a;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.qa-input:focus {
+  outline: none;
+  border-color: #0f766e;
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.1);
+}
+
+.qa-input-footer,
+.qa-answer-header,
+.source-header,
+.qa-actions,
+.qa-metadata,
+.source-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.char-count,
+.metric-label,
+.source-details,
+.empty-hint,
+.thinking-subtitle {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.qa-button,
+.action-button {
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.qa-button {
+  padding: 0.8rem 1.3rem;
+  background: linear-gradient(135deg, #0f766e 0%, #1d4ed8 100%);
+  color: #fff;
+  border-radius: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 14px 30px rgba(29, 78, 216, 0.25);
+}
+
+.qa-button:hover:not(:disabled),
+.action-button:hover {
+  transform: translateY(-1px);
+}
+
+.qa-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spinner {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.qa-error {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1rem;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: 16px;
+  color: #9f1239;
+}
+
+.error-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffe4e6;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.error-content {
+  flex: 1;
+}
+
+.error-message,
+.source-title,
+.empty-text,
+.thinking-title {
+  margin: 0;
+}
+
+.error-close {
+  border: 1px solid #fda4af;
+  background: transparent;
+  color: #9f1239;
+  border-radius: 10px;
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+}
+
+.qa-thinking-card,
+.qa-response {
+  padding: 1.25rem;
+}
+
+.qa-thinking-card {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.thinking-orb {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, #60a5fa, #0f766e);
+  box-shadow: 0 14px 28px rgba(15, 118, 110, 0.22);
+}
+
+.qa-answer-section,
+.qa-sources-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.qa-answer-label {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+
+.qa-section-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.qa-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(92px, 1fr));
+  gap: 0.75rem;
+}
+
+.metric-chip {
+  padding: 0.8rem 0.9rem;
+  background: #f8fafc;
+  border: 1px solid #dbe5f0;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 100px;
+}
+
+.metric-chip strong {
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.qa-answer-text {
+  font-size: 0.96rem;
+  line-height: 1.7;
+  color: #1e293b;
+  padding: 1rem;
+  background: linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%);
+  border-left: 4px solid #0f766e;
+  border-radius: 16px;
+  white-space: pre-wrap;
+}
+
+.qa-guardrail {
+  padding: 0.75rem 0.9rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  border-radius: 14px;
+  font-size: 0.85rem;
+}
+
+.sources-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.source-item {
+  padding: 1rem;
+  background: linear-gradient(180deg, #fffaf0 0%, #ffffff 100%);
+  border: 1px solid #fde68a;
+  border-radius: 18px;
+}
+
+.source-number {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+  color: #fff;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.source-info {
+  flex: 1;
+}
+
+.source-title {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.relevance-score {
+  display: inline-flex;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: #ecfeff;
+  color: #155e75;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.source-snippet {
+  margin: 0;
+  padding: 0.85rem 0.95rem;
+  background: #fff;
+  border: 1px solid #fef3c7;
+  border-radius: 14px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.qa-actions {
+  padding-top: 1rem;
+  margin-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.action-button {
+  padding: 0.7rem 1rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #dbe5f0;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.qa-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1rem;
+  text-align: center;
+}
+
+.empty-icon {
+  margin: 0 0 0.75rem;
+  width: 68px;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0f766e 0%, #1d4ed8 100%);
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.empty-text {
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .qa-interface {
+    padding: 1rem;
+  }
+
+  .qa-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .qa-thinking-card,
+  .qa-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-button,
+  .qa-button {
+    width: 100%;
+    justify-content: center;
+  }
+}

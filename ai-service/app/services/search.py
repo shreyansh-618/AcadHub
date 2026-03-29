@@ -2,15 +2,20 @@ from typing import List, Dict, Optional
 import logging
 from app.config.database import get_db
 from app.services.embedding import embedding_service
+from app.services.chunking import ChunkingService
 from app.models.schemas import SearchResult
 from bson import ObjectId
 import numpy as np
 import time
+import re
 
 logger = logging.getLogger(__name__)
 
 class SearchService:
     """Service for semantic search on academic resources"""
+
+    def __init__(self):
+        self.chunking_service = ChunkingService()
     
     async def search(
         self,
@@ -54,7 +59,13 @@ class SearchService:
             logger.info(f"Searching embeddings with filters: {filter_query}")
             matching_docs = await embeddings_collection.find(
                 {"resourceId": {"$exists": True}, **filter_query},
-                {"resourceId": 1, "embedding": 1}
+                {
+                    "resourceId": 1,
+                    "embedding": 1,
+                    "content": 1,
+                    "pageNumber": 1,
+                    "chunkIndex": 1,
+                },
             ).to_list(None)
             
             logger.info(f"Found {len(matching_docs)} matching documents")
@@ -93,22 +104,41 @@ class SearchService:
             
             logger.info(f"Calculated similarity scores for {len(results_with_scores)} documents")
             
-            # Sort by score descending
-            results_with_scores.sort(key=lambda x: x[1], reverse=True)
-            
-            # Get total count
-            total = len(results_with_scores)
-            
-            # Apply pagination
-            paginated_results = results_with_scores[offset:offset + limit]
-            
-            logger.info(f"Paginated to {len(paginated_results)} results (offset: {offset}, limit: {limit})")
+            resource_scores = {}
+            for doc, score in results_with_scores:
+                resource_key = str(doc.get("resourceId"))
+                entry = resource_scores.setdefault(
+                    resource_key,
+                    {
+                        "resourceId": doc.get("resourceId"),
+                        "score": float(score),
+                        "sourceCount": 0,
+                        "bestChunk": doc,
+                    },
+                )
+                entry["sourceCount"] += 1
+                if float(score) > entry["score"]:
+                    entry["score"] = float(score)
+                    entry["bestChunk"] = doc
+
+            aggregated_results = list(resource_scores.values())
+            aggregated_results.sort(key=lambda x: x["score"], reverse=True)
+
+            total = len(aggregated_results)
+            paginated_results = aggregated_results[offset:offset + limit]
+
+            logger.info(
+                "Paginated to %d results (offset: %d, limit: %d)",
+                len(paginated_results),
+                offset,
+                limit,
+            )
             
             # Fetch full resource details in one query (avoid N+1 lookups).
             resources_collection = db.resources
             object_ids = []
-            for doc, _ in paginated_results:
-                resource_id = doc.get("resourceId")
+            for item in paginated_results:
+                resource_id = item.get("resourceId")
                 if isinstance(resource_id, ObjectId):
                     object_ids.append(resource_id)
                 else:
@@ -123,22 +153,27 @@ class SearchService:
             resources_by_id = {str(resource["_id"]): resource for resource in resources}
 
             search_results = []
-            for doc, score in paginated_results:
-                resource_key = str(doc.get("resourceId"))
+            for item in paginated_results:
+                resource_key = str(item.get("resourceId"))
                 resource = resources_by_id.get(resource_key)
                 if resource:
                     created_at = resource.get("createdAt")
+                    best_chunk = item.get("bestChunk") or {}
+                    snippet = (best_chunk.get("content") or "").strip()
                     search_results.append(SearchResult(
                         id=str(resource["_id"]),
                         title=resource.get("title", ""),
                         description=resource.get("description"),
-                        score=float(score),
+                        score=float(item.get("score", 0)),
                         resource_type=resource.get("type", ""),
                         category=resource.get("category", ""),
                         department=resource.get("department", ""),
                         subject=resource.get("subject", ""),
                         semester=resource.get("semester"),
                         created_at=created_at.isoformat() if created_at else None,
+                        snippet=snippet[:220] if snippet else None,
+                        page_number=best_chunk.get("pageNumber"),
+                        source_count=int(item.get("sourceCount", 0)),
                     ))
             
             processing_time = time.time() - start_time
@@ -165,18 +200,10 @@ class SearchService:
                 logger.error("Database not initialized, cannot index resource")
                 return False
             
-            # Create combined text for embedding
-            text = f"{title} {description} {content}"
-            
             logger.info(f"Indexing resource: {resource_id} - {title}")
-            
-            # Get embedding
-            logger.info(f"Generating embedding for resource: {resource_id}")
-            embedding = embedding_service.get_embedding(text)
-            logger.info(f"Embedding generated successfully. Dimension: {len(embedding)}")
-            
-            # Store in MongoDB
+
             embeddings_collection = db.embeddings
+            resources_collection = db.resources
             normalized_resource_id = resource_id
             index_filter = {"resourceId": resource_id}
             try:
@@ -186,21 +213,73 @@ class SearchService:
             except Exception:
                 pass
 
-            result = await embeddings_collection.update_one(
-                index_filter,
+            chunk_sections = self._build_chunk_sections(title, description, content)
+            chunks = []
+            for section in chunk_sections:
+                chunks.extend(
+                    self.chunking_service.chunk_text(
+                        section["text"],
+                        page_number=section["page_number"],
+                    )
+                )
+
+            if not chunks:
+                combined_text = f"{title} {description} {content}".strip()
+                chunks = self.chunking_service.chunk_text(combined_text, page_number=1)
+
+            chunk_documents = []
+            resource_chunks = []
+            for chunk in chunks:
+                embedding = chunk.get("embedding") or []
+                if not embedding:
+                    continue
+
+                chunk_document = {
+                    "resourceId": normalized_resource_id,
+                    "title": title,
+                    "description": description,
+                    "content": chunk.get("text", ""),
+                    "embedding": embedding,
+                    "pageNumber": chunk.get("pageNumber", 1),
+                    "chunkIndex": chunk.get("index", 0),
+                    "tokenCount": chunk.get("tokenCount", 0),
+                    "charCount": chunk.get("charCount", 0),
+                    "metadata": kwargs,
+                    "updatedAt": time.time(),
+                }
+                chunk_documents.append(chunk_document)
+                resource_chunks.append(
+                    {
+                        "index": chunk_document["chunkIndex"],
+                        "text": chunk_document["content"],
+                        "pageNumber": chunk_document["pageNumber"],
+                        "tokenCount": chunk_document["tokenCount"],
+                        "charCount": chunk_document["charCount"],
+                        "embedding": embedding,
+                    }
+                )
+
+            if not chunk_documents:
+                logger.warning("No chunk embeddings were generated for resource %s", resource_id)
+                return False
+
+            await embeddings_collection.delete_many(index_filter)
+            await embeddings_collection.insert_many(chunk_documents)
+            await resources_collection.update_one(
+                {"_id": ObjectId(str(resource_id))},
                 {
                     "$set": {
-                        "resourceId": normalized_resource_id,
-                        "content": text,
-                        "embedding": embedding,
-                        "metadata": kwargs,
-                        "updatedAt": time.time(),
+                        "chunks": resource_chunks,
+                        "processingStatus": "chunked",
                     }
                 },
-                upsert=True
             )
-            
-            logger.info(f"Successfully indexed resource: {resource_id}. Matched: {result.matched_count}, Modified: {result.modified_count}")
+
+            logger.info(
+                "Successfully indexed resource %s into %d chunks",
+                resource_id,
+                len(chunk_documents),
+            )
             return True
             
         except Exception as e:
@@ -225,6 +304,40 @@ class SearchService:
         except Exception as e:
             logger.error(f"Error deleting index: {e}")
             raise
+
+    def _build_chunk_sections(
+        self,
+        title: str,
+        description: str,
+        content: str,
+    ) -> List[Dict]:
+        combined = f"{title}\n\n{description}\n\n{content}".strip()
+        if not combined:
+            return []
+
+        marker_pattern = re.compile(
+            r"(?=(?:slide|page)\s+\d+\s*:)",
+            flags=re.IGNORECASE,
+        )
+        pieces = [piece.strip() for piece in marker_pattern.split(combined) if piece.strip()]
+        sections = []
+
+        for piece in pieces:
+            match = re.match(r"(?:slide|page)\s+(\d+)\s*:\s*", piece, flags=re.IGNORECASE)
+            page_number = int(match.group(1)) if match else 1
+            cleaned_piece = re.sub(
+                r"^(?:slide|page)\s+\d+\s*:\s*",
+                "",
+                piece,
+                flags=re.IGNORECASE,
+            ).strip()
+            if cleaned_piece:
+                sections.append({"page_number": page_number, "text": cleaned_piece})
+
+        if sections:
+            return sections
+
+        return [{"page_number": 1, "text": combined}]
 
 # Global instance
 search_service = SearchService()

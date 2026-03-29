@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const resourceSchema = new mongoose.Schema(
   {
@@ -14,13 +14,19 @@ const resourceSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['pdf', 'pptx', 'docx', 'doc', 'txt', 'image'],
+      enum: ["pdf", "pptx", "docx", "doc", "txt", "image"],
       required: true,
       index: true,
     },
     category: {
       type: String,
-      enum: ['lecture-notes', 'textbooks', 'question-papers', 'assignments', 'other'],
+      enum: [
+        "lecture-notes",
+        "textbooks",
+        "question-papers",
+        "assignments",
+        "other",
+      ],
       required: true,
       index: true,
     },
@@ -46,7 +52,7 @@ const resourceSchema = new mongoose.Schema(
     },
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
       index: true,
     },
@@ -68,6 +74,10 @@ const resourceSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    extractedContent: {
+      type: String,
+      default: "",
+    },
     downloads: {
       type: Number,
       default: 0,
@@ -79,7 +89,7 @@ const resourceSchema = new mongoose.Schema(
     likedBy: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        ref: "User",
       },
     ],
     isApproved: {
@@ -89,18 +99,58 @@ const resourceSchema = new mongoose.Schema(
     },
     approvedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
     },
     approvedAt: Date,
+    // RAG System - Text chunks for vector search
+    chunks: [
+      {
+        index: Number,
+        text: String,
+        embedding: [Number], // 384-dimensional vector (sentence-transformers/all-MiniLM-L6-v2)
+        pageNumber: Number,
+        tokenCount: Number,
+        charCount: Number,
+        _id: false,
+      },
+    ],
+    // AI-generated summary (Week 3+)
+    summary: {
+      type: String,
+      default: null,
+    },
+    // Auto-generated tags from content (Week 3+)
+    tags: [
+      {
+        name: String,
+        confidence: { type: Number, min: 0, max: 1 },
+        _id: false,
+      },
+    ],
+    // Status of processing
+    processingStatus: {
+      type: String,
+      enum: [
+        "pending",
+        "processing",
+        "chunked",
+        "embedded",
+        "indexed",
+        "failed",
+      ],
+      default: "pending",
+    },
+    processingError: String,
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Full-text search index
-resourceSchema.index({ title: 'text', description: 'text' });
+resourceSchema.index({ title: "text", description: "text" });
 resourceSchema.index({ createdAt: -1 });
 resourceSchema.index({ department: 1, subject: 1, semester: 1 });
+// Vector search index is created separately in MongoDB Atlas
 
-export const Resource = mongoose.model('Resource', resourceSchema);
+export const Resource = mongoose.model("Resource", resourceSchema);

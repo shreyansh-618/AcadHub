@@ -82,15 +82,15 @@ export default function Resources() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-12 px-4">
+    <div className="page-shell">
       <div className="container-max">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div className="glass-panel mb-8 flex flex-col items-start justify-between gap-4 p-8 md:flex-row md:items-center">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold gradient-text mb-2">
               Resources Library
             </h1>
-            <p className="text-slate-400 text-sm md:text-base">
+            <p className="text-slate-600 text-sm md:text-base">
               Browse and share academic resources with your peers
             </p>
           </div>
@@ -103,10 +103,10 @@ export default function Resources() {
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <div className="glass mb-8 grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3">
           {/* Category Filter */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-slate-600 mb-2">
               Category
             </label>
             <select
@@ -124,7 +124,7 @@ export default function Resources() {
 
           {/* Subject Filter */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-slate-600 mb-2">
               Subject
             </label>
             <select
@@ -142,7 +142,7 @@ export default function Resources() {
 
           {/* Items Per Page */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-slate-600 mb-2">
               Items Per Page
             </label>
             <select
@@ -164,47 +164,47 @@ export default function Resources() {
             <div className="text-slate-400">Loading resources...</div>
           </div>
         ) : resources.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
-            {resources.map((resource) => (
-              <div
-                key={resource._id}
-                className="group bg-slate-800 rounded-lg border border-slate-700 hover:border-blue-500 transition-all duration-300 overflow-hidden hover:shadow-xl hover:shadow-blue-500/20"
-              >
-                {/* Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4">
-                  <span className="text-xs font-semibold text-white bg-black bg-opacity-30 px-2 py-1 rounded">
-                    {resource.category}
-                  </span>
-                </div>
-
-                {/* Content */}
-                <div className="p-4">
-                  <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors line-clamp-2 mb-2">
-                    {resource.title}
-                  </h3>
-                  <p className="text-sm text-slate-400 line-clamp-2 mb-4">
-                    {resource.description || 'No description provided'}
-                  </p>
-
-                  {/* Metadata */}
-                  <div className="space-y-2 text-xs text-slate-400 mb-4 border-t border-slate-700 pt-3">
-                    <div className="flex justify-between">
-                      <span>Subject:</span>
-                      <span className="text-slate-200">{resource.subject}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Uploaded by:</span>
-                      <span className="text-slate-200 truncate">{resource.uploadedByName}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Size:</span>
-                      <span className="text-slate-200">{formatBytes(resource.fileSize)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Date:</span>
-                      <span className="text-slate-200">{formatDate(resource.createdAt)}</span>
-                    </div>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+              {resources.map((resource) => (
+                <div
+                  key={resource._id}
+                  className="group overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/75 shadow-[0_18px_50px_rgba(91,101,118,0.08)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_24px_70px_rgba(91,101,118,0.14)]"
+                >
+                  {/* Header */}
+                  <div className="bg-[linear-gradient(135deg,rgba(208,214,222,0.95),rgba(236,239,242,0.92))] p-4">
+                    <span className="rounded-full border border-slate-300/80 bg-white/75 px-3 py-1 text-xs font-semibold text-slate-700">
+                      {resource.category}
+                    </span>
                   </div>
+
+                  {/* Content */}
+                  <div className="p-4">
+                    <h3 className="mb-2 line-clamp-2 text-lg font-bold text-slate-900 transition-colors group-hover:text-slate-700">
+                      {resource.title}
+                    </h3>
+                    <p className="mb-4 line-clamp-2 text-sm text-slate-600">
+                      {resource.description || 'No description provided'}
+                    </p>
+
+                    {/* Metadata */}
+                    <div className="mb-4 space-y-2 border-t border-slate-200 pt-3 text-xs text-slate-500">
+                      <div className="flex justify-between">
+                        <span>Subject:</span>
+                        <span className="text-slate-700">{resource.subject}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Uploaded by:</span>
+                        <span className="truncate text-slate-700">{resource.uploadedByName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Size:</span>
+                        <span className="text-slate-700">{formatBytes(resource.fileSize)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Date:</span>
+                        <span className="text-slate-700">{formatDate(resource.createdAt)}</span>
+                      </div>
+                    </div>
 
                   {/* Actions */}
                   <div className="flex gap-2">
@@ -230,7 +230,7 @@ export default function Resources() {
           </div>
         ) : (
           <div className="text-center py-12">
-            <div className="text-slate-400 text-lg mb-4">No resources found</div>
+            <div className="text-slate-600 text-lg mb-4">No resources found</div>
             <button
               onClick={() => setShowUploadModal(true)}
               className="btn-primary"

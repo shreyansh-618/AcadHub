@@ -26,6 +26,9 @@ class SearchResult(BaseModel):
     subject: str
     semester: Optional[int] = None
     created_at: Optional[str] = None
+    snippet: Optional[str] = None
+    page_number: Optional[int] = None
+    source_count: Optional[int] = None
 
 class SearchResponse(BaseModel):
     results: List[SearchResult]

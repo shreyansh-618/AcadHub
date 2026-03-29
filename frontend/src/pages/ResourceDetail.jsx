@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { authService } from "@/services/auth";
+import QAInterface from "@/components/QAInterface";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_ROOT = import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
+const SERVER_BASE_URL = API_ROOT.replace(/\/api\/v1\/?$/, "");
 
 export default function ResourceDetailPage() {
   const { id } = useParams();
@@ -14,23 +16,64 @@ export default function ResourceDetailPage() {
   const [likesCount, setLikesCount] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
   const [textContent, setTextContent] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryData, setSummaryData] = useState(null);
+  const [editingTags, setEditingTags] = useState(false);
+  const [tagDraft, setTagDraft] = useState("");
 
   useEffect(() => {
     const fetchResource = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_BASE_URL}/api/v1/resources/${id}`);
+        const response = await fetch(`${SERVER_BASE_URL}/api/v1/resources/${id}`);
         const data = await response.json();
 
         if (response.ok && data.data?.resource) {
           setResource(data.data.resource);
           setLikesCount(data.data.resource.likes || 0);
+          setSummaryData(
+            data.data.resource.summary
+              ? { summary: data.data.resource.summary, keyPoints: [] }
+              : null,
+          );
+          setTagDraft(
+            (data.data.resource.tags || [])
+              .map((tag) => tag.name || tag)
+              .filter(Boolean)
+              .join(", "),
+          );
 
-          // Load text files content for inline viewing
+          authService
+            .getCurrentUser()
+            .then(async (firebaseUser) => {
+              if (!firebaseUser) return;
+              const token = await firebaseUser.getIdToken();
+              return fetch(`${SERVER_BASE_URL}/api/v1/analytics/track`, {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  type: "view",
+                  resourceId: id,
+                  topicName: data.data.resource.subject,
+                  metadata: {
+                    subject: data.data.resource.subject,
+                    category: data.data.resource.category,
+                    semester: data.data.resource.semester,
+                    department: data.data.resource.department,
+                    deviceType: "web",
+                  },
+                }),
+              });
+            })
+            .catch(() => {});
+
           if (data.data.resource.type === "txt") {
             try {
               const textResponse = await fetch(
-                `${API_BASE_URL}/api/v1/resources/${id}/view`,
+                `${SERVER_BASE_URL}/api/v1/resources/${id}/view`,
               );
               const text = await textResponse.text();
               setTextContent(text);
@@ -65,7 +108,7 @@ export default function ResourceDetailPage() {
 
       const token = await firebaseUser.getIdToken();
       const response = await fetch(
-        `${API_BASE_URL}/api/v1/resources/${id}/like`,
+        `${SERVER_BASE_URL}/api/v1/resources/${id}/like`,
         {
           method: "POST",
           headers: {
@@ -78,9 +121,7 @@ export default function ResourceDetailPage() {
       if (response.ok) {
         setLiked(!liked);
         setLikesCount(data.data?.liked ? likesCount + 1 : likesCount - 1);
-        toast.success(
-          data.data?.liked ? "Resource liked!" : "Resource unliked",
-        );
+        toast.success(data.data?.liked ? "Resource liked!" : "Resource unliked");
       } else {
         toast.error(data.message || "Failed to like resource");
       }
@@ -90,36 +131,139 @@ export default function ResourceDetailPage() {
     }
   };
 
+  const getAuthToken = async () => {
+    const firebaseUser = await authService.getCurrentUser();
+    if (!firebaseUser) {
+      toast.error("Please login to continue");
+      navigate("/login");
+      return null;
+    }
+    return firebaseUser.getIdToken();
+  };
+
+  const handleGenerateSummary = async () => {
+    try {
+      const token = await getAuthToken();
+      if (!token) return;
+
+      setSummaryLoading(true);
+      const response = await fetch(
+        `${SERVER_BASE_URL}/api/v1/resources/${id}/generate-summary`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to generate summary");
+      }
+
+      setSummaryData(data.data || null);
+      setResource((current) =>
+        current ? { ...current, summary: data.data?.summary || current.summary } : current,
+      );
+      toast.success("Summary generated");
+    } catch (error) {
+      console.error("Generate summary error:", error);
+      toast.error(error.message || "Failed to generate summary");
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  const handleSaveTags = async () => {
+    try {
+      const token = await getAuthToken();
+      if (!token) return;
+
+      const tags = tagDraft
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .map((name) => ({ name, confidence: 1 }));
+
+      const response = await fetch(`${SERVER_BASE_URL}/api/v1/resources/${id}/tags`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ tags }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to update tags");
+      }
+
+      setResource((current) =>
+        current ? { ...current, tags: data.data?.tags || current.tags } : current,
+      );
+      setEditingTags(false);
+      toast.success("Tags updated");
+    } catch (error) {
+      console.error("Update tags error:", error);
+      toast.error(error.message || "Failed to update tags");
+    }
+  };
+
   const handleDownload = () => {
-    window.open(`${API_BASE_URL}/api/v1/resources/${id}/download`, "_blank");
+    authService
+      .getCurrentUser()
+      .then(async (firebaseUser) => {
+        if (!firebaseUser) return;
+        const token = await firebaseUser.getIdToken();
+        return fetch(`${SERVER_BASE_URL}/api/v1/analytics/track`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: "download",
+            resourceId: id,
+            topicName: resource?.subject,
+            metadata: {
+              subject: resource?.subject || null,
+              category: resource?.category || null,
+              semester: resource?.semester || null,
+              department: resource?.department || null,
+              deviceType: "web",
+            },
+          }),
+        });
+      })
+      .catch(() => {});
+
+    window.open(`${SERVER_BASE_URL}/api/v1/resources/${id}/download`, "_blank");
   };
 
   const handleOpen = () => {
-    // Navigate to dedicated viewer page
     window.open(`/resources/${id}/view`, "_blank");
   };
 
   const canViewInline = () => {
-    // Show preview for files that browsers can display natively or via Google Docs Viewer
     const nativeTypes = ["pdf", "image", "txt"];
     const officeTypes = ["doc", "docx", "pptx", "xls", "xlsx"];
     return (
       resource &&
-      (nativeTypes.includes(resource.type) ||
-        officeTypes.includes(resource.type))
+      (nativeTypes.includes(resource.type) || officeTypes.includes(resource.type))
     );
   };
 
   const isOfficeType = () => {
-    return (
-      resource && ["doc", "docx", "pptx", "xls", "xlsx"].includes(resource.type)
-    );
+    return resource && ["doc", "docx", "pptx", "xls", "xlsx"].includes(resource.type);
   };
 
   const isLocalhost =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1";
-  const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(`${API_BASE_URL}/api/v1/resources/${id}/view`)}&embedded=true`;
+  const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(`${SERVER_BASE_URL}/api/v1/resources/${id}/view`)}&embedded=true`;
 
   const formatBytes = (bytes) => {
     if (bytes === 0) return "0 Bytes";
@@ -139,22 +283,22 @@ export default function ResourceDetailPage() {
 
   const getFileIcon = (type) => {
     const icons = {
-      pdf: "📄",
-      doc: "📝",
-      docx: "📝",
-      pptx: "📊",
-      txt: "📃",
-      image: "🖼️",
+      pdf: "PDF",
+      doc: "DOC",
+      docx: "DOCX",
+      pptx: "PPTX",
+      txt: "TXT",
+      image: "IMG",
     };
-    return icons[type] || "📄";
+    return icons[type] || "FILE";
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+      <div className="page-shell flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          <p className="mt-4 text-gray-400">Loading resource...</p>
+          <div className="inline-block h-12 w-12 animate-spin rounded-full border-b-2 border-slate-500" />
+          <p className="mt-4 text-slate-500">Loading resource...</p>
         </div>
       </div>
     );
@@ -165,284 +309,284 @@ export default function ResourceDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-12 px-4">
-      <div className="container-max max-w-4xl mx-auto">
-        {/* Back Button */}
+    <div className="page-shell">
+      <div className="container-max max-w-5xl">
         <Link
           to="/resources"
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors"
+          className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900"
         >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
+          <span aria-hidden="true">←</span>
           Back to Resources
         </Link>
 
-        {/* Resource Card */}
-        <div className="glass-lg rounded-2xl overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="text-4xl">{getFileIcon(resource.type)}</span>
-                  <span className="text-xs font-semibold text-white bg-black bg-opacity-30 px-3 py-1 rounded-full">
+        <div className="glass-lg overflow-hidden">
+          <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(217,222,228,0.92),rgba(247,248,249,0.96))] p-8">
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+              <div className="max-w-3xl">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="rounded-2xl border border-slate-300 bg-white/85 px-4 py-2 text-sm font-semibold tracking-[0.24em] text-slate-700">
+                    {getFileIcon(resource.type)}
+                  </div>
+                  <span className="rounded-full border border-slate-300 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
                     {resource.category}
                   </span>
                 </div>
-                <h1 className="text-3xl font-bold text-white mb-2">
+                <h1 className="mb-3 text-4xl font-bold text-slate-900">
                   {resource.title}
                 </h1>
                 {resource.description && (
-                  <p className="text-blue-100 text-lg">
+                  <p className="max-w-2xl text-base leading-7 text-slate-600">
                     {resource.description}
                   </p>
                 )}
               </div>
+
+              <div className="glass-sm min-w-[220px] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  Uploaded By
+                </p>
+                <div className="mt-3 flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#8b96a6,#697586)] text-sm font-bold text-white">
+                    {resource.uploadedByName?.charAt(0).toUpperCase() || "U"}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-900">
+                      {resource.uploadedByName}
+                    </p>
+                    {resource.uploadedBy?.email && (
+                      <p className="text-sm text-slate-500">
+                        {resource.uploadedBy.email}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Content */}
           <div className="p-8">
-            {/* Metadata Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-semibold text-slate-400 block mb-1">
-                    Subject
-                  </label>
-                  <p className="text-white text-lg">{resource.subject}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-slate-400 block mb-1">
-                    Department
-                  </label>
-                  <p className="text-white text-lg">{resource.department}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-slate-400 block mb-1">
-                    Semester
-                  </label>
-                  <p className="text-white text-lg">
-                    Semester {resource.semester}
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-semibold text-slate-400 block mb-1">
-                    Academic Year
-                  </label>
-                  <p className="text-white text-lg">{resource.academicYear}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-slate-400 block mb-1">
-                    File Size
-                  </label>
-                  <p className="text-white text-lg">
-                    {formatBytes(resource.fileSize)}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-slate-400 block mb-1">
-                    Uploaded
-                  </label>
-                  <p className="text-white text-lg">
-                    {formatDate(resource.createdAt)}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Uploader Info */}
-            <div className="bg-slate-700 rounded-lg p-4 mb-8">
-              <label className="text-sm font-semibold text-slate-400 block mb-2">
-                Uploaded By
-              </label>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white font-bold">
-                  {resource.uploadedByName?.charAt(0).toUpperCase() || "U"}
-                </div>
-                <div>
-                  <p className="text-white font-semibold">
-                    {resource.uploadedByName}
-                  </p>
-                  {resource.uploadedBy?.email && (
-                    <p className="text-slate-400 text-sm">
-                      {resource.uploadedBy.email}
+            <div className="grid gap-8 md:grid-cols-2">
+              <div className="glass-sm p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  Document Details
+                </p>
+                <div className="mt-5 space-y-4">
+                  <div>
+                    <p className="text-sm text-slate-500">Subject</p>
+                    <p className="text-lg font-semibold text-slate-900">
+                      {resource.subject}
                     </p>
-                  )}
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">Department</p>
+                    <p className="text-lg font-semibold text-slate-900">
+                      {resource.department}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">Semester</p>
+                    <p className="text-lg font-semibold text-slate-900">
+                      Semester {resource.semester}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass-sm p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  File Information
+                </p>
+                <div className="mt-5 space-y-4">
+                  <div>
+                    <p className="text-sm text-slate-500">Academic Year</p>
+                    <p className="text-lg font-semibold text-slate-900">
+                      {resource.academicYear}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">File Size</p>
+                    <p className="text-lg font-semibold text-slate-900">
+                      {formatBytes(resource.fileSize)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">Uploaded</p>
+                    <p className="text-lg font-semibold text-slate-900">
+                      {formatDate(resource.createdAt)}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Stats */}
-            <div className="flex items-center gap-6 mb-8 pb-8 border-b border-slate-700">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">📥</span>
-                <div>
-                  <p className="text-slate-400 text-sm">Downloads</p>
-                  <p className="text-white text-xl font-bold">
-                    {resource.downloads || 0}
+            <div className="my-8 grid gap-4 border-y border-slate-200 py-8 sm:grid-cols-2">
+              <div className="glass-sm p-5">
+                <p className="text-sm text-slate-500">Downloads</p>
+                <p className="mt-2 text-3xl font-bold text-slate-900">
+                  {resource.downloads || 0}
+                </p>
+              </div>
+              <div className="glass-sm p-5">
+                <p className="text-sm text-slate-500">Likes</p>
+                <p className="mt-2 text-3xl font-bold text-slate-900">
+                  {likesCount}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
+              <div className="glass-sm p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                      AI Summary
+                    </p>
+                    <h2 className="mt-2 text-2xl font-bold text-slate-900">
+                      Smart document overview
+                    </h2>
+                  </div>
+                  <button onClick={handleGenerateSummary} className="btn-outline px-4 py-2 text-sm">
+                    {summaryLoading ? "Generating..." : summaryData?.summary ? "Refresh Summary" : "Generate Summary"}
+                  </button>
+                </div>
+                {summaryData?.summary || resource.summary ? (
+                  <div className="mt-4 rounded-3xl border border-emerald-200 bg-emerald-50/60 p-5">
+                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                      AI Generated Answer
+                    </p>
+                    <p className="mt-3 text-base leading-7 text-slate-700">
+                      {summaryData?.summary || resource.summary}
+                    </p>
+                    {summaryData?.keyPoints?.length ? (
+                      <div className="mt-4">
+                        <p className="text-sm font-semibold text-slate-900">Key points</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {summaryData.keyPoints.slice(0, 5).map((point, index) => (
+                            <span
+                              key={`point-${index}`}
+                              className="rounded-full bg-white px-3 py-2 text-sm text-slate-700 border border-emerald-100"
+                            >
+                              {point}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="mt-4 text-slate-600">
+                    Generate a cached summary to make this resource easier to review.
                   </p>
-                </div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">❤️</span>
-                <div>
-                  <p className="text-slate-400 text-sm">Likes</p>
-                  <p className="text-white text-xl font-bold">{likesCount}</p>
+
+              <div className="glass-sm p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                      Tags
+                    </p>
+                    <h2 className="mt-2 text-xl font-bold text-slate-900">
+                      Improve discoverability
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => setEditingTags((current) => !current)}
+                    className="btn-outline px-4 py-2 text-sm"
+                  >
+                    {editingTags ? "Cancel" : "Correct Tags"}
+                  </button>
                 </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {(resource.tags || []).map((tag, index) => (
+                    <span
+                      key={`tag-${index}`}
+                      className="rounded-full border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700"
+                    >
+                      {tag.name || tag}
+                    </span>
+                  ))}
+                </div>
+
+                {editingTags ? (
+                  <div className="mt-4">
+                    <textarea
+                      value={tagDraft}
+                      onChange={(event) => setTagDraft(event.target.value)}
+                      rows={4}
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none"
+                      placeholder="Enter comma-separated tags"
+                    />
+                    <button onClick={handleSaveTags} className="btn-primary mt-3 px-4 py-2 text-sm">
+                      Save Tags
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={handleOpen}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-semibold transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+                className="btn-primary flex-1"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                  />
-                </svg>
                 Open File
               </button>
               <button
                 onClick={handleDownload}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+                className="btn-outline flex-1"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                  />
-                </svg>
                 Download File
               </button>
               <button
                 onClick={handleLike}
-                className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                className="btn-secondary"
               >
-                <svg
-                  className={`w-5 h-5 ${liked ? "fill-red-500 text-red-500" : ""}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                  />
-                </svg>
                 {liked ? "Liked" : "Like"}
               </button>
             </div>
           </div>
         </div>
 
-        {/* File Preview Section - Always show for viewable files */}
         {canViewInline() && (
-          <div className="glass-lg rounded-2xl p-8 mt-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-white">File Preview</h2>
-              <div className="flex gap-2">
+          <div className="glass-lg mt-8 p-8">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">File Preview</h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  Open, inspect, or expand the resource directly in-browser.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={handleOpen}
-                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
-                  title="Open in new tab"
+                  className="btn-outline px-4 py-2 text-sm"
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                    />
-                  </svg>
                   Open in New Tab
                 </button>
                 {resource.type === "pdf" && (
                   <button
                     onClick={() => setFullscreen(!fullscreen)}
-                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
-                    title="Toggle fullscreen"
+                    className="btn-outline px-4 py-2 text-sm"
                   >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-                      />
-                    </svg>
                     {fullscreen ? "Exit Fullscreen" : "Fullscreen"}
                   </button>
                 )}
               </div>
             </div>
+
             <div
-              className={`bg-slate-800 rounded-lg p-4 ${fullscreen ? "fixed inset-4 z-50" : ""}`}
+              className={`overflow-hidden rounded-[28px] border border-slate-200 bg-white ${fullscreen ? "fixed inset-4 z-50 p-4" : ""}`}
             >
               {resource.type === "image" ? (
-                <div className="flex justify-center">
+                <div className="flex justify-center bg-slate-50 p-4">
                   <img
-                    src={`${API_BASE_URL}/api/v1/resources/${id}/view`}
+                    src={`${SERVER_BASE_URL}/api/v1/resources/${id}/view`}
                     alt={resource.title}
-                    className="max-w-full h-auto rounded-lg"
+                    className="max-w-full rounded-2xl"
                     style={{
                       maxHeight: fullscreen ? "calc(100vh - 8rem)" : "600px",
-                    }}
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                      const errorDiv = document.createElement("div");
-                      errorDiv.className = "text-slate-400 text-center py-8";
-                      errorDiv.textContent = "Preview not available";
-                      e.target.parentElement.appendChild(errorDiv);
                     }}
                   />
                 </div>
@@ -453,20 +597,20 @@ export default function ResourceDetailPage() {
                   }}
                 >
                   <iframe
-                    src={`${API_BASE_URL}/api/v1/resources/${id}/view`}
-                    className="w-full h-full rounded-lg"
+                    src={`${SERVER_BASE_URL}/api/v1/resources/${id}/view`}
+                    className="h-full w-full"
                     title={resource.title}
                     style={{ border: "none" }}
                   />
                 </div>
               ) : resource.type === "txt" && textContent ? (
-                <div className="bg-slate-900 rounded-lg p-6 max-h-[600px] overflow-auto">
-                  <pre className="text-slate-200 whitespace-pre-wrap font-mono text-sm">
+                <div className="max-h-[600px] overflow-auto bg-white p-6">
+                  <pre className="whitespace-pre-wrap font-mono text-sm text-slate-700">
                     {textContent}
                   </pre>
                 </div>
               ) : resource.type === "txt" ? (
-                <div className="text-slate-400 text-center py-8">
+                <div className="py-8 text-center text-slate-500">
                   Loading text content...
                 </div>
               ) : isOfficeType() ? (
@@ -478,32 +622,30 @@ export default function ResourceDetailPage() {
                   >
                     <iframe
                       src={googleViewerUrl}
-                      className="w-full h-full rounded-lg"
+                      className="h-full w-full"
                       title={resource.title}
                       style={{ border: "none" }}
                     />
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <div className="text-5xl mb-4">
-                      {getFileIcon(resource.type)}
+                  <div className="px-6 py-10 text-center">
+                    <div className="mb-4 text-sm font-semibold uppercase tracking-[0.26em] text-slate-500">
+                      Office Preview Limited on Localhost
                     </div>
-                    <p className="text-slate-400 mb-4">
-                      Office files cannot be previewed on localhost. Download
-                      the file or deploy the app for in-browser viewing.
+                    <p className="mx-auto mb-6 max-w-xl text-slate-600">
+                      Office files cannot be embedded from localhost. Download the
+                      file or open it through a deployed URL for full in-browser
+                      preview.
                     </p>
-                    <div className="flex gap-3 justify-center">
-                      <button
-                        onClick={handleDownload}
-                        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold transition-colors"
-                      >
+                    <div className="flex flex-wrap justify-center gap-3">
+                      <button onClick={handleDownload} className="btn-primary px-4 py-2 text-sm">
                         Download
                       </button>
                       <a
                         href={googleViewerUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-semibold transition-colors"
+                        className="btn-outline px-4 py-2 text-sm"
                       >
                         Try Google Docs Viewer
                       </a>
@@ -515,40 +657,40 @@ export default function ResourceDetailPage() {
           </div>
         )}
 
-        {/* Non-viewable files message */}
         {resource && !canViewInline() && (
-          <div className="glass-lg rounded-2xl p-8 mt-8">
-            <div className="text-center py-8">
-              <div className="text-6xl mb-4">{getFileIcon(resource.type)}</div>
-              <h3 className="text-xl font-bold text-white mb-2">
+          <div className="glass-lg mt-8 p-8">
+            <div className="py-8 text-center">
+              <div className="mb-4 text-sm font-semibold uppercase tracking-[0.28em] text-slate-500">
                 Preview Not Available
+              </div>
+              <h3 className="mb-2 text-2xl font-bold text-slate-900">
+                Download required for this file type
               </h3>
-              <p className="text-slate-400 mb-6">
-                This file type ({resource.type.toUpperCase()}) cannot be
-                previewed in the browser. Please download the file to view it.
+              <p className="mx-auto mb-6 max-w-xl text-slate-600">
+                This file type ({resource.type.toUpperCase()}) cannot be previewed
+                directly in the browser yet. Download it to view the full content.
               </p>
-              <button
-                onClick={handleDownload}
-                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold transition-all transform hover:scale-105 inline-flex items-center gap-2"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                  />
-                </svg>
+              <button onClick={handleDownload} className="btn-primary">
                 Download to View
               </button>
             </div>
           </div>
         )}
+
+        <div className="glass-lg mt-8 p-8">
+          <div className="mb-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+              Ask AI
+            </p>
+            <h2 className="mt-2 text-2xl font-bold text-slate-900">
+              Grounded Q&A with citations
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Ask about this resource and review confidence, timing, and chunk-level sources.
+            </p>
+          </div>
+          <QAInterface resourceId={id} />
+        </div>
       </div>
     </div>
   );

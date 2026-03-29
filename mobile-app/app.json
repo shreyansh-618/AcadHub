@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "AcadHub",
+    "slug": "acadhub-mobile",
+    "version": "1.0.0",
+    "scheme": "acadhub",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTabletMode": true,
+      "bundleIdentifier": "com.acadhub.mobile",
+      "usesNonExemptEncryption": false
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.acadhub.mobile",
+      "softwareKeyboardLayoutMode": "pan"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "15.1"
+          },
+          "android": {
+            "minSdkVersion": 24,
+            "targetSdkVersion": 36,
+            "compileSdkVersion": 36
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "acadhub-mobile-project"
+      },
+      "firebaseApiKey": "AIzaSyCP-Y9uF0bFPVS3PgjAca6L3Gd4Uagr6sA",
+      "firebaseAuthDomain": "smart-college-resource-hub.firebaseapp.com",
+      "firebaseProjectId": "smart-college-resource-hub",
+      "firebaseStorageBucket": "smart-college-resource-hub.appspot.com",
+      "firebaseMessagingSenderId": "285566887066",
+      "firebaseAppId": "1:285566887066:web:0c4c7f0c2b3e4f5a6b7c8d9e0f1a2b3c"
+    }
+  }
+}

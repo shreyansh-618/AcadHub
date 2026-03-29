@@ -9,3 +9,8 @@ pydantic
 python-dotenv
 httpx
 numpy
+openai>=1.0.0
+yake>=0.3.2
+torch
+pdfplumber>=0.10.0
+

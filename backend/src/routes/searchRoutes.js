@@ -40,12 +40,7 @@ const fallbackSearch = async ({ query, cleanFilters, limit }) => {
   }));
 };
 
-/**
- * @route   POST /api/v1/search/semantic
- * @desc    Proxy semantic search requests to the AI service
- * @access  Public
- */
-router.post("/semantic", async (req, res) => {
+const performSemanticSearch = async (req, res) => {
   try {
     const { query, filters, limit = 10 } = req.body;
 
@@ -130,7 +125,9 @@ router.post("/semantic", async (req, res) => {
       code: "SUCCESS",
       data: {
         resources,
-        total: usedFallback ? resources.length : (aiData.total || resources.length),
+        total: usedFallback
+          ? resources.length
+          : aiData.total || resources.length,
         processingTime: aiData.processing_time,
       },
     });
@@ -153,7 +150,21 @@ router.post("/semantic", async (req, res) => {
       },
     });
   }
-});
+};
+
+/**
+ * @route   POST /api/v1/search
+ * @desc    Root search endpoint - delegates to semantic search
+ * @access  Public
+ */
+router.post("/", performSemanticSearch);
+
+/**
+ * @route   POST /api/v1/search/semantic
+ * @desc    Proxy semantic search requests to the AI service
+ * @access  Public
+ */
+router.post("/semantic", performSemanticSearch);
 
 /**
  * @route   POST /api/v1/search/index-all

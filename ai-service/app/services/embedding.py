@@ -1,7 +1,5 @@
-from sentence_transformers import SentenceTransformer
 from typing import List
 import logging
-from numpy import ndarray
 from app.config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -17,11 +15,12 @@ class EmbeddingService:
         """Load the embedding model"""
         try:
             if self.model is None:
-                logger.info(f"Loading model: {self.model_name}")
+                logger.info("Loading model: %s", self.model_name)
+                from sentence_transformers import SentenceTransformer
                 self.model = SentenceTransformer(self.model_name)
-                logger.info(f"Model loaded successfully. Dimension: {self.model.get_sentence_embedding_dimension()}")
+                logger.info("Model loaded successfully. Dimension: %s", self.model.get_sentence_embedding_dimension())
         except Exception as e:
-            logger.error(f"Error loading model: {e}")
+            logger.error("Error loading model: %s", str(e))
             raise
     
     def get_embedding(self, text: str) -> List[float]:
@@ -45,6 +44,10 @@ class EmbeddingService:
         if self.model is None:
             self.load_model()
         return self.model.get_sentence_embedding_dimension()
+    
+    def encode(self, text: str) -> List[float]:
+        """Alias for get_embedding - for compatibility"""
+        return self.get_embedding(text)
     
     def similarity(self, embedding1: List[float], embedding2: List[float]) -> float:
         """Calculate cosine similarity between two embeddings"""

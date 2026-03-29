@@ -37,6 +37,6 @@ export const searchService = {
    * Save search query for analytics
    */
   async logSearch(query, resultCount) {
-    await apiClient.post('/api/v1/search/log', { query, resultCount });
+    await apiClient.post('/search/log', { query, resultCount });
   },
 };

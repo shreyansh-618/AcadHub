@@ -3,7 +3,6 @@ from pydantic import BaseModel
 from typing import Optional
 from app.models.schemas import SearchQuery, SearchResponse, EmbeddingRequest, EmbeddingResponse
 from app.services.search import search_service
-from app.services.embedding import embedding_service
 from app.config.database import get_db
 import logging
 import time
@@ -60,6 +59,7 @@ async def get_embedding(request: EmbeddingRequest):
         if not request.text.strip():
             raise HTTPException(status_code=400, detail="Text cannot be empty")
 
+        from app.services.embedding import embedding_service
         embedding_service.load_model()
         embedding = embedding_service.get_embedding(request.text)
         dimension = embedding_service.get_dimension()
@@ -142,7 +142,7 @@ async def index_all_resources():
                 resource_id = str(resource["_id"])
                 title = resource.get("title", "")
                 description = resource.get("description", "")
-                content = f"{title} {description}"
+                content = resource.get("extractedContent") or f"{title} {description}"
 
                 success = await search_service.index_resource(
                     resource_id=resource_id,

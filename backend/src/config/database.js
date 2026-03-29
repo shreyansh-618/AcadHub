@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 import { logger } from "./logger.js";
-import Grid from "gridfs-stream";
 
 let gfs = null;
+let uploadsFilesCollection = null;
 
 export const connectDB = async () => {
   try {
@@ -18,10 +18,12 @@ export const connectDB = async () => {
     });
     logger.info("MongoDB connected successfully");
 
-    // Initialize GridFS
+    // Initialize GridFS bucket
     const conn = mongoose.connection;
-    gfs = Grid(conn.db, mongoose.mongo);
-    gfs.collection("uploads");
+    gfs = new mongoose.mongo.GridFSBucket(conn.db, {
+      bucketName: "uploads",
+    });
+    uploadsFilesCollection = conn.db.collection("uploads.files");
 
     // Create indexes
     await createIndexes();
@@ -70,4 +72,13 @@ export const getGridFS = () => {
     );
   }
   return gfs;
+};
+
+export const getUploadsFilesCollection = () => {
+  if (!uploadsFilesCollection) {
+    throw new Error(
+      "GridFS files collection not initialized. Make sure connectDB is called first.",
+    );
+  }
+  return uploadsFilesCollection;
 };

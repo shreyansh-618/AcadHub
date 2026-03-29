@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Menu, X, LogOut } from "lucide-react";
 import { authService } from "@/services/auth";
 
 export default function Navbar({ user }) {
@@ -15,7 +16,6 @@ export default function Navbar({ user }) {
     }
   };
 
-  // ✅ SAFE derived values
   const firstName = user?.name?.trim() ? user.name.split(" ")[0] : "User";
 
   const avatarSrc =
@@ -23,31 +23,36 @@ export default function Navbar({ user }) {
     "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop";
 
   return (
-    <nav className="sticky top-0 z-50 glass border-b border-slate-700">
+    <nav className="sticky top-0 z-50 navbar-gradient">
       <div className="container-max">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link
             to="/"
-            className="flex items-center gap-2 font-bold text-xl gradient-text group"
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity group"
           >
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-sm font-bold group-hover:shadow-lg group-hover:shadow-blue-500/50 transition-all">
-              AP
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white text-sm font-bold shadow-sm group-hover:shadow-md transition-all bg-[linear-gradient(135deg,#8b96a6,#697586)]">
+              AH
             </div>
-            <span className="hidden sm:inline">Academic Platform</span>
+            <div className="hidden sm:block">
+              <div className="text-lg font-bold text-slate-900">AcadHub</div>
+              <div className="text-xs text-slate-500 font-medium">
+                AI Learning Platform
+              </div>
+            </div>
           </Link>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-1">
             <Link
               to="/"
-              className="text-slate-300 hover:text-blue-400 transition-colors duration-200 font-medium"
+              className="navbar-link"
             >
               Home
             </Link>
             <Link
               to="/search"
-              className="text-slate-300 hover:text-purple-400 transition-colors duration-200 font-medium"
+              className="navbar-link"
             >
               Search
             </Link>
@@ -56,53 +61,62 @@ export default function Navbar({ user }) {
               <>
                 <Link
                   to="/resources"
-                  className="text-slate-300 hover:text-blue-400 transition-colors duration-200 font-medium"
+                  className="navbar-link"
                 >
                   Resources
                 </Link>
                 <Link
                   to="/discussions"
-                  className="text-slate-300 hover:text-purple-400 transition-colors duration-200 font-medium"
+                  className="navbar-link"
                 >
                   Discussions
                 </Link>
                 <Link
                   to="/events"
-                  className="text-slate-300 hover:text-pink-400 transition-colors duration-200 font-medium"
+                  className="navbar-link"
                 >
                   Events
+                </Link>
+                <Link
+                  to="/assistant"
+                  className="navbar-link"
+                >
+                  AI Assistant
                 </Link>
               </>
             )}
           </div>
 
           {/* Auth Buttons */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-3">
             {user ? (
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <Link
                   to="/profile"
-                  className="flex items-center gap-2 text-slate-300 hover:text-blue-400 transition-colors"
+                  className="flex items-center gap-2 rounded-full px-3 py-2 hover:bg-white/70 transition-colors group border border-transparent hover:border-slate-200/70"
                 >
                   <img
                     src={avatarSrc}
                     alt={user?.name || "User avatar"}
-                    className="w-8 h-8 rounded-full border border-blue-400 border-opacity-30"
+                    className="w-8 h-8 rounded-full border border-slate-300 shadow-sm group-hover:shadow-md transition-all"
                   />
-                  <span className="text-sm font-medium">{firstName}</span>
+                  <span className="text-sm font-semibold text-slate-700 group-hover:text-slate-950">
+                    {firstName}
+                  </span>
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="text-slate-300 hover:text-red-400 transition-colors duration-200 font-medium"
+                  className="p-2 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-full transition-colors"
+                  title="Logout"
                 >
-                  Logout
+                  <LogOut size={20} />
                 </button>
               </div>
             ) : (
               <>
                 <Link
                   to="/login"
-                  className="text-slate-300 hover:text-blue-400 transition-colors duration-200 font-medium"
+                  className="px-4 py-2 text-slate-700 font-semibold hover:bg-white/70 rounded-full transition-colors"
                 >
                   Login
                 </Link>
@@ -116,36 +130,26 @@ export default function Navbar({ user }) {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden text-slate-300 hover:text-blue-400 transition-colors"
+            className="md:hidden p-2 text-slate-700 hover:bg-white/70 rounded-full transition-colors border border-slate-200/70"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden pb-6 space-y-2 border-t border-slate-700 border-opacity-30 pt-4">
+          <div className="md:hidden pb-6 space-y-2 border-t border-slate-200/70 pt-4 animate-in fade-in slide-in-from-top-2">
             <Link
               to="/"
-              className="block text-slate-300 hover:text-blue-400 py-2 font-medium transition-colors"
+              className="block px-4 py-2 text-slate-700 hover:bg-white/70 hover:text-slate-950 font-medium transition-colors rounded-2xl"
+              onClick={() => setIsMenuOpen(false)}
             >
               Home
             </Link>
             <Link
               to="/search"
-              className="block text-slate-300 hover:text-purple-400 py-2 font-medium transition-colors"
+              className="block px-4 py-2 text-slate-700 hover:bg-white/70 hover:text-slate-950 font-medium transition-colors rounded-2xl"
+              onClick={() => setIsMenuOpen(false)}
             >
               Search
             </Link>
@@ -154,42 +158,58 @@ export default function Navbar({ user }) {
               <>
                 <Link
                   to="/resources"
-                  className="block text-slate-300 hover:text-blue-400 py-2 font-medium transition-colors"
+                  className="block px-4 py-2 text-slate-700 hover:bg-white/70 hover:text-slate-950 font-medium transition-colors rounded-2xl"
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   Resources
                 </Link>
                 <Link
                   to="/discussions"
-                  className="block text-slate-300 hover:text-purple-400 py-2 font-medium transition-colors"
+                  className="block px-4 py-2 text-slate-700 hover:bg-white/70 hover:text-slate-950 font-medium transition-colors rounded-2xl"
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   Discussions
                 </Link>
                 <Link
                   to="/events"
-                  className="block text-slate-300 hover:text-pink-400 py-2 font-medium transition-colors"
+                  className="block px-4 py-2 text-slate-700 hover:bg-white/70 hover:text-slate-950 font-medium transition-colors rounded-2xl"
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   Events
                 </Link>
-                <button
-                  onClick={handleLogout}
-                  className="block w-full text-left text-slate-300 hover:text-red-400 py-2 font-medium transition-colors"
+                <Link
+                  to="/assistant"
+                  className="block px-4 py-2 text-slate-700 hover:bg-white/70 hover:text-slate-950 font-medium transition-colors rounded-2xl"
+                  onClick={() => setIsMenuOpen(false)}
                 >
+                  AI Assistant
+                </Link>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-rose-700 hover:bg-rose-50 font-medium transition-colors rounded-2xl flex items-center gap-2"
+                >
+                  <LogOut size={18} />
                   Logout
                 </button>
               </>
             )}
 
             {!user && (
-              <div className="flex gap-2 mt-4 pt-4 border-t border-slate-700 border-opacity-30">
+              <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-200/70">
                 <Link
                   to="/login"
-                  className="btn-ghost flex-1 text-center py-2 px-4"
+                  className="btn-outline text-center py-2 px-4"
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   Login
                 </Link>
                 <Link
                   to="/signup"
-                  className="btn-primary flex-1 text-center py-2 px-4"
+                  className="btn-primary text-center py-2 px-4"
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   Sign Up
                 </Link>

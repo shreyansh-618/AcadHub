@@ -22,8 +22,11 @@ import DashboardPage from "@/pages/Dashboard";
 import ProfilePage from "@/pages/Profile";
 import SearchPage from "@/pages/Search";
 import ResourcesPage from "@/pages/Resources";
+import ResourceDetailPage from "@/pages/ResourceDetail";
+import FileViewerPage from "@/pages/FileViewer";
 import DiscussionsPage from "@/pages/Discussions";
 import EventsPage from "@/pages/Events";
+import AcademicAssistant from "@/pages/AcademicAssistant";
 import NotFoundPage from "@/pages/NotFound";
 
 function AppContent({ user, loading }) {
@@ -91,6 +94,16 @@ function AppContent({ user, loading }) {
             element={<ProtectedRoute user={user} element={<ResourcesPage />} />}
           />
           <Route
+            path="/resources/:id"
+            element={
+              <ProtectedRoute user={user} element={<ResourceDetailPage />} />
+            }
+          />
+          <Route
+            path="/resources/:id/view"
+            element={<ProtectedRoute user={user} element={<FileViewerPage />} />}
+          />
+          <Route
             path="/discussions"
             element={
               <ProtectedRoute user={user} element={<DiscussionsPage />} />
@@ -99,6 +112,18 @@ function AppContent({ user, loading }) {
           <Route
             path="/events"
             element={<ProtectedRoute user={user} element={<EventsPage />} />}
+          />
+          <Route
+            path="/assistant"
+            element={
+              <ProtectedRoute user={user} element={<AcademicAssistant />} />
+            }
+          />
+          <Route
+            path="/assistant/:resourceId"
+            element={
+              <ProtectedRoute user={user} element={<AcademicAssistant />} />
+            }
           />
 
           {/* 404 */}
@@ -130,7 +155,7 @@ export default function App() {
           // Fetch user profile with smart retry logic
           const fetchProfile = async (retryCount = 0) => {
             try {
-              const response = await apiClient.get("/api/v1/users/profile");
+              const response = await apiClient.get("/users/profile");
 
               if (response.status === 200 && response.data?.data?.user) {
                 setUser(response.data.data.user);
