@@ -6,6 +6,7 @@ import os
 class Settings(BaseSettings):
     environment: str = os.getenv("NODE_ENV", os.getenv("ENVIRONMENT", "development"))
     # Database
+    db_uri: str = os.getenv("DB_URI", "")
     mongodb_uri: str = os.getenv("DB_URI", os.getenv("MONGODB_URI", "mongodb://localhost:27017/academic_platform"))
 
     # Models & AI
@@ -55,6 +56,7 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 
 @lru_cache()
