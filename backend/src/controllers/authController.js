@@ -1,21 +1,48 @@
 import { User } from "../models/User.js";
 import { logger } from "../config/logger.js";
+import { revokeUserSessions } from "../config/firebase.js";
+import {
+  normalizeOptionalString,
+  normalizeString,
+  parseBoundedInteger,
+  safeJsonError,
+} from "../utils/security.js";
+
+const getVerifiedIdentity = (req) => ({
+  uid: req.firebaseUser?.uid,
+  email: req.firebaseUser?.email?.toLowerCase(),
+  name: req.firebaseUser?.name || req.body?.name,
+});
 
 /**
  * Signup - Create user profile after Firebase authentication
  */
 export const signup = async (req, res) => {
   try {
+    const identity = getVerifiedIdentity(req);
     const {
-      uid,
-      email,
-      name,
       role = "student",
       department,
       branch,
       university,
       semester,
     } = req.body;
+    const uid = identity.uid;
+    const email = identity.email;
+    const name = normalizeString(identity.name, { maxLength: 100 });
+    const normalizedRole = ["student", "faculty", "admin"].includes(role)
+      ? role
+      : "student";
+    const normalizedDepartment = normalizeString(
+      department || branch || "Computer Science",
+      { maxLength: 100 },
+    );
+    const normalizedUniversity = normalizeString(university, { maxLength: 150 });
+    const normalizedSemester = parseBoundedInteger(semester, {
+      min: 1,
+      max: 12,
+      fallback: undefined,
+    });
 
     // Validate required fields
     if (!uid || !email || !name) {
@@ -35,11 +62,11 @@ export const signup = async (req, res) => {
       if (user) {
         user.uid = uid;
         user.name = user.name || name;
-        user.role = user.role || role;
-        user.department = user.department || department || branch || "Computer Science";
-        user.university = user.university || university || "";
-        if (user.semester == null && Number.isFinite(Number(semester))) {
-          user.semester = Number(semester);
+        user.role = user.role || normalizedRole;
+        user.department = user.department || normalizedDepartment;
+        user.university = user.university || normalizedUniversity || "";
+        if (user.semester == null && normalizedSemester != null) {
+          user.semester = normalizedSemester;
         }
         await user.save();
 
@@ -91,10 +118,10 @@ export const signup = async (req, res) => {
       uid,
       email,
       name,
-      role,
-      department: department || branch || "Computer Science",
-      university: university || "",
-      semester: Number.isFinite(Number(semester)) ? Number(semester) : undefined,
+      role: normalizedRole,
+      department: normalizedDepartment,
+      university: normalizedUniversity || "",
+      semester: normalizedSemester,
       isActive: true,
     });
 
@@ -129,11 +156,13 @@ export const signup = async (req, res) => {
       });
     }
 
-    res.status(500).json({
-      code: "SIGNUP_ERROR",
-      message: "Failed to create user account",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
+    return safeJsonError(
+      res,
+      500,
+      "SIGNUP_ERROR",
+      "Failed to create user account",
+      error,
+    );
   }
 };
 
@@ -142,7 +171,10 @@ export const signup = async (req, res) => {
  */
 export const login = async (req, res) => {
   try {
-    const { uid, email, name } = req.body;
+    const identity = getVerifiedIdentity(req);
+    const uid = identity.uid;
+    const email = identity.email;
+    const name = normalizeOptionalString(identity.name, { maxLength: 100 });
 
     if (!uid) {
       return res.status(400).json({
@@ -205,11 +237,7 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     logger.error("Login error:", error);
-    res.status(500).json({
-      code: "LOGIN_ERROR",
-      message: "Failed to login",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
+    return safeJsonError(res, 500, "LOGIN_ERROR", "Failed to login", error);
   }
 };
 
@@ -218,7 +246,10 @@ export const login = async (req, res) => {
  */
 export const googleAuth = async (req, res) => {
   try {
-    const { uid, email, name } = req.body;
+    const identity = getVerifiedIdentity(req);
+    const uid = identity.uid;
+    const email = identity.email;
+    const name = normalizeOptionalString(identity.name, { maxLength: 100 });
 
     if (!uid || !email) {
       return res.status(400).json({
@@ -311,10 +342,35 @@ export const googleAuth = async (req, res) => {
       });
     }
 
-    res.status(500).json({
-      code: "AUTH_ERROR",
-      message: "Failed to authenticate with Google",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    return safeJsonError(
+      res,
+      500,
+      "AUTH_ERROR",
+      "Failed to authenticate with Google",
+      error,
+    );
+  }
+};
+
+export const logout = async (req, res) => {
+  try {
+    const uid = req.firebaseUser?.uid;
+
+    if (!uid) {
+      return res.status(401).json({
+        code: "UNAUTHORIZED",
+        message: "No authenticated session found",
+      });
+    }
+
+    await revokeUserSessions(uid);
+
+    return res.status(200).json({
+      code: "LOGOUT_SUCCESS",
+      message: "Sessions invalidated successfully",
     });
+  } catch (error) {
+    logger.error("Logout error:", error);
+    return safeJsonError(res, 500, "LOGOUT_ERROR", "Failed to logout", error);
   }
 };

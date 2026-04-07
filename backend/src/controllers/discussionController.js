@@ -1,6 +1,12 @@
 import { Discussion } from '../models/Discussion.js';
-import { User } from '../models/User.js';
 import { logger } from '../config/logger.js';
+import {
+  escapeRegex,
+  normalizeString,
+  normalizeStringArray,
+  parseBoundedInteger,
+  safeJsonError,
+} from "../utils/security.js";
 
 /**
  * Create a new discussion
@@ -9,8 +15,19 @@ export const createDiscussion = async (req, res) => {
   try {
     const user = req.user;
     const { title, content, subject, department, tags } = req.body;
+    const normalizedTitle = normalizeString(title, { maxLength: 150 });
+    const normalizedContent = normalizeString(content, { maxLength: 5000 });
+    const normalizedSubject = normalizeString(subject, { maxLength: 100 });
+    const normalizedDepartment = normalizeString(
+      department || user?.department || "General",
+      { maxLength: 100 },
+    );
+    const normalizedTags = normalizeStringArray(tags, {
+      maxItems: 10,
+      maxLength: 40,
+    });
 
-    if (!user || !user._id || !title || !content || !subject) {
+    if (!user || !user._id || !normalizedTitle || !normalizedContent || !normalizedSubject) {
       return res.status(400).json({
         code: 'INVALID_INPUT',
         message: 'Missing required fields',
@@ -18,13 +35,13 @@ export const createDiscussion = async (req, res) => {
     }
 
     const discussion = await Discussion.create({
-      title,
-      content,
-      subject,
-      department: department || user.department || 'General',
+      title: normalizedTitle,
+      content: normalizedContent,
+      subject: normalizedSubject,
+      department: normalizedDepartment,
       author: user._id,
       authorName: user.name,
-      tags: tags || [],
+      tags: normalizedTags,
       replies: [],
       views: 0,
       helpful: 0,
@@ -40,10 +57,7 @@ export const createDiscussion = async (req, res) => {
     });
   } catch (error) {
     logger.error('Create discussion error:', error);
-    res.status(500).json({
-      code: 'CREATE_ERROR',
-      message: error.message || 'Failed to create discussion',
-    });
+    return safeJsonError(res, 500, "CREATE_ERROR", "Failed to create discussion", error);
   }
 };
 
@@ -53,24 +67,27 @@ export const createDiscussion = async (req, res) => {
 export const getDiscussions = async (req, res) => {
   try {
     const { page = 1, limit = 10, subject, department, search } = req.query;
+    const safePage = parseBoundedInteger(page, { min: 1, max: 10000, fallback: 1 });
+    const safeLimit = parseBoundedInteger(limit, { min: 1, max: 50, fallback: 10 });
 
     const filter = {};
-    if (subject) filter.subject = subject;
-    if (department) filter.department = department;
+    if (subject) filter.subject = normalizeString(subject, { maxLength: 100 });
+    if (department) filter.department = normalizeString(department, { maxLength: 100 });
     if (search) {
+      const searchRegex = new RegExp(escapeRegex(normalizeString(search, { maxLength: 100 })), 'i');
       filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { content: { $regex: search, $options: 'i' } },
+        { title: { $regex: searchRegex } },
+        { content: { $regex: searchRegex } },
       ];
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const skip = (safePage - 1) * safeLimit;
 
     const discussions = await Discussion.find(filter)
       .populate('author', 'name email avatar')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(safeLimit);
 
     const total = await Discussion.countDocuments(filter);
 
@@ -79,19 +96,16 @@ export const getDiscussions = async (req, res) => {
       data: {
         discussions,
         pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page: safePage,
+          limit: safeLimit,
           total,
-          pages: Math.ceil(total / parseInt(limit)),
+          pages: Math.ceil(total / safeLimit),
         },
       },
     });
   } catch (error) {
     logger.error('Get discussions error:', error);
-    res.status(500).json({
-      code: 'FETCH_ERROR',
-      message: error.message || 'Failed to fetch discussions',
-    });
+    return safeJsonError(res, 500, "FETCH_ERROR", "Failed to fetch discussions", error);
   }
 };
 
@@ -122,10 +136,7 @@ export const getDiscussionById = async (req, res) => {
     });
   } catch (error) {
     logger.error('Get discussion error:', error);
-    res.status(500).json({
-      code: 'FETCH_ERROR',
-      message: error.message || 'Failed to fetch discussion',
-    });
+    return safeJsonError(res, 500, "FETCH_ERROR", "Failed to fetch discussion", error);
   }
 };
 
@@ -137,8 +148,9 @@ export const replyToDiscussion = async (req, res) => {
     const user = req.user;
     const { id } = req.params;
     const { content } = req.body;
+    const normalizedContent = normalizeString(content, { maxLength: 5000 });
 
-    if (!user || !user._id || !content) {
+    if (!user || !user._id || !normalizedContent) {
       return res.status(400).json({
         code: 'INVALID_INPUT',
         message: 'Missing required fields',
@@ -156,7 +168,7 @@ export const replyToDiscussion = async (req, res) => {
     const reply = {
       author: user._id,
       authorName: user.name,
-      content,
+      content: normalizedContent,
       createdAt: new Date(),
       helpful: 0,
       helpfulBy: [],
@@ -173,10 +185,7 @@ export const replyToDiscussion = async (req, res) => {
     });
   } catch (error) {
     logger.error('Reply to discussion error:', error);
-    res.status(500).json({
-      code: 'REPLY_ERROR',
-      message: error.message || 'Failed to add reply',
-    });
+    return safeJsonError(res, 500, "REPLY_ERROR", "Failed to add reply", error);
   }
 };
 
@@ -230,10 +239,7 @@ export const markHelpful = async (req, res) => {
     });
   } catch (error) {
     logger.error('Mark helpful error:', error);
-    res.status(500).json({
-      code: 'OPERATION_ERROR',
-      message: error.message || 'Failed to mark helpful',
-    });
+    return safeJsonError(res, 500, "OPERATION_ERROR", "Failed to mark helpful", error);
   }
 };
 
@@ -276,9 +282,6 @@ export const deleteDiscussion = async (req, res) => {
     });
   } catch (error) {
     logger.error('Delete discussion error:', error);
-    res.status(500).json({
-      code: 'DELETION_ERROR',
-      message: error.message || 'Failed to delete discussion',
-    });
+    return safeJsonError(res, 500, "DELETION_ERROR", "Failed to delete discussion", error);
   }
 };

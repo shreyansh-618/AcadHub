@@ -1,7 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List
+import asyncio
 import logging
+from app.config.settings import settings
+from app.utils.sanitize import sanitize_text
 
 router = APIRouter(prefix="/embed", tags=["Embeddings"])
 logger = logging.getLogger(__name__)
@@ -28,13 +31,14 @@ async def embed_text(request: EmbedTextRequest):
         Embedding vector
     """
     try:
-        if not request.text or len(request.text.strip()) == 0:
+        normalized_text = sanitize_text(request.text, max_length=settings.max_input_length)
+        if not normalized_text:
             raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-        logger.info(f"Embedding text: {len(request.text)} characters")
+        logger.info(f"Embedding text: {len(normalized_text)} characters")
 
         from app.services.embedding import embedding_service
-        embedding = embedding_service.get_embedding(request.text)
+        embedding = await asyncio.to_thread(embedding_service.get_embedding, normalized_text)
 
         return {
             "success": True,
@@ -67,10 +71,18 @@ async def embed_batch(request: EmbedBatchRequest):
         if len(request.texts) > 100:
             raise HTTPException(status_code=400, detail="Too many texts (max 100)")
 
-        logger.info(f"Embedding {len(request.texts)} texts batch")
+        normalized_texts = [
+            sanitize_text(text, max_length=settings.max_input_length)
+            for text in request.texts
+            if sanitize_text(text, max_length=settings.max_input_length)
+        ]
+        if not normalized_texts:
+            raise HTTPException(status_code=400, detail="No valid texts provided")
+
+        logger.info(f"Embedding {len(normalized_texts)} texts batch")
 
         from app.services.embedding import embedding_service
-        embeddings = embedding_service.get_embeddings(request.texts)
+        embeddings = await asyncio.to_thread(embedding_service.get_embeddings, normalized_texts)
 
         return {
             "success": True,
@@ -96,7 +108,7 @@ async def get_dimension():
     """
     try:
         from app.services.embedding import embedding_service
-        dimension = embedding_service.get_dimension()
+        dimension = await asyncio.to_thread(embedding_service.get_dimension)
         return {
             "success": True,
             "dimension": dimension,

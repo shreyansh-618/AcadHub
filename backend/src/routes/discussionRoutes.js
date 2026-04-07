@@ -8,6 +8,7 @@ import {
   deleteDiscussion,
 } from '../controllers/discussionController.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { validateObjectIdParam } from "../middleware/validation.js";
 
 const router = express.Router();
 
@@ -30,27 +31,27 @@ router.get('/', getDiscussions);
  * @desc    Get discussion by ID
  * @access  Public
  */
-router.get('/:id', getDiscussionById);
+router.get('/:id', validateObjectIdParam("id"), getDiscussionById);
 
 /**
  * @route   POST /api/v1/discussions/:id/replies
  * @desc    Add a reply to discussion
  * @access  Private
  */
-router.post('/:id/replies', authMiddleware, replyToDiscussion);
+router.post('/:id/replies', authMiddleware, validateObjectIdParam("id"), replyToDiscussion);
 
 /**
  * @route   POST /api/v1/discussions/:id/helpful
  * @desc    Mark discussion as helpful
  * @access  Private
  */
-router.post('/:id/helpful', authMiddleware, markHelpful);
+router.post('/:id/helpful', authMiddleware, validateObjectIdParam("id"), markHelpful);
 
 /**
  * @route   DELETE /api/v1/discussions/:id
  * @desc    Delete a discussion
  * @access  Private
  */
-router.delete('/:id', authMiddleware, deleteDiscussion);
+router.delete('/:id', authMiddleware, validateObjectIdParam("id"), deleteDiscussion);
 
 export default router;

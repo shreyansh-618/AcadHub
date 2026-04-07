@@ -6,9 +6,9 @@ let uploadsFilesCollection = null;
 
 export const connectDB = async () => {
   try {
-    const mongoUri = process.env.MONGODB_URI;
+    const mongoUri = process.env.DB_URI || process.env.MONGODB_URI;
     if (!mongoUri) {
-      throw new Error("MONGODB_URI environment variable is not defined");
+      throw new Error("DB_URI/MONGODB_URI environment variable is not defined");
     }
 
     // Add connection timeout

@@ -1,6 +1,8 @@
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from app.config.settings import settings
+from app.services.runtime_state import runtime_state
+from app.utils.resilience import retry_async
 import logging
 
 logger = logging.getLogger(__name__)
@@ -10,27 +12,44 @@ db: AsyncIOMotorDatabase = None
 
 async def init_db():
     global db_client, db
-    try:
-        db_client = AsyncIOMotorClient(settings.mongodb_uri, serverSelectionTimeoutMS=2000)
-        # Use 'test' database to match backend (which defaults to 'test' when no DB specified in URI)
-        # or use the database from URI if present
+    runtime_state.set_db_status("connecting")
+
+    async def connect_once():
+        global db_client, db
+        if db_client:
+            db_client.close()
+        db_client = AsyncIOMotorClient(
+            settings.mongodb_uri,
+            serverSelectionTimeoutMS=2000,
+        )
         try:
             db = db_client.get_default_database()
         except Exception:
             db = db_client.test
-        # Try to verify connection but don't fail if unavailable
-        try:
-            await db_client.admin.command('ping')
-            logger.info("Connected to MongoDB")
-        except Exception as ping_error:
-            logger.warning(f"MongoDB connection ping failed: {ping_error}. Starting API anyway.")
+        await db_client.admin.command("ping")
+        return db
+
+    try:
+        await asyncio.wait_for(
+            retry_async(
+                connect_once,
+                retries=settings.db_connect_retries,
+                base_delay_seconds=settings.db_connect_retry_base_delay_seconds,
+                operation_name="MongoDB connection",
+            ),
+            timeout=settings.db_connect_timeout_seconds,
+        )
+        logger.info("Connected to MongoDB")
+        runtime_state.set_db_status("connected")
     except Exception as e:
-        logger.warning(f"Failed to initialize MongoDB connection: {e}. Starting API anyway.")
+        logger.warning(f"Failed to initialize MongoDB connection after retries: {e}. Starting API anyway.")
+        runtime_state.set_db_status("failed", str(e))
 
 async def close_db():
     global db_client
     if db_client:
         db_client.close()
+    runtime_state.set_db_status("disconnected")
 
 def get_db():
     return db

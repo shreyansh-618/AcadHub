@@ -5,7 +5,10 @@
 import axios from "axios";
 
 // Use the backend API which will forward to AI service
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:3000";
 
 const qaClient = axios.create({
   baseURL: API_BASE_URL,

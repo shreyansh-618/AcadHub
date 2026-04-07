@@ -1,6 +1,5 @@
 import axios from "axios";
 import { logger } from "../config/logger.js";
-import { Resource } from "../models/Resource.js";
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
 

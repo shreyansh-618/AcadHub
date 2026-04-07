@@ -4,7 +4,10 @@ import toast from "react-hot-toast";
 import JSZip from "jszip";
 import mammoth from "mammoth";
 
-const API_ROOT = import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
+const API_ROOT =
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:3000/api/v1";
 const SERVER_BASE_URL = API_ROOT.replace(/\/api\/v1\/?$/, "");
 
 const decodeXmlEntities = (value = "") =>
@@ -14,6 +17,75 @@ const decodeXmlEntities = (value = "") =>
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'");
+
+const sanitizePreviewHtml = (html = "") => {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const allowedTags = new Set([
+    "a",
+    "article",
+    "b",
+    "blockquote",
+    "br",
+    "code",
+    "div",
+    "em",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "hr",
+    "li",
+    "ol",
+    "p",
+    "pre",
+    "span",
+    "strong",
+    "table",
+    "tbody",
+    "td",
+    "th",
+    "thead",
+    "tr",
+    "u",
+    "ul",
+  ]);
+  const allowedAttributes = new Set(["href", "target", "rel", "colspan", "rowspan"]);
+
+  const nodes = [...doc.body.querySelectorAll("*")];
+  nodes.forEach((node) => {
+    const tag = node.tagName.toLowerCase();
+    if (!allowedTags.has(tag)) {
+      node.replaceWith(...node.childNodes);
+      return;
+    }
+
+    [...node.attributes].forEach((attribute) => {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value || "";
+      const isEventHandler = name.startsWith("on");
+      const isUnsafeLink =
+        name === "href" && /^\s*javascript:/i.test(value);
+
+      if (isEventHandler || isUnsafeLink || !allowedAttributes.has(name)) {
+        node.removeAttribute(attribute.name);
+      }
+    });
+
+    if (tag === "a") {
+      node.setAttribute("rel", "noopener noreferrer");
+      node.setAttribute("target", "_blank");
+    }
+  });
+
+  return doc.body.innerHTML;
+};
 
 const extractPptxSlides = async (arrayBuffer) => {
   const zip = await JSZip.loadAsync(arrayBuffer);
@@ -106,7 +178,9 @@ export default function FileViewerPage() {
 
         if (fileExt === "docx") {
           const result = await mammoth.convertToHtml({ arrayBuffer });
-          setDocxHtml(result.value || "<p>No readable content found.</p>");
+          setDocxHtml(
+            sanitizePreviewHtml(result.value || "<p>No readable content found.</p>"),
+          );
           setPptxSlides([]);
         } else if (fileExt === "pptx") {
           const slides = await extractPptxSlides(arrayBuffer);

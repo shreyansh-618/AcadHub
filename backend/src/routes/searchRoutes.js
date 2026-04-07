@@ -1,6 +1,8 @@
 import express from "express";
 import { logger } from "../config/logger.js";
 import { Resource } from "../models/Resource.js";
+import { authMiddleware, requireRole } from "../middleware/auth.js";
+import { escapeRegex, normalizeString, parseBoundedInteger } from "../utils/security.js";
 
 const router = express.Router();
 
@@ -13,7 +15,7 @@ const fallbackSearch = async ({ query, cleanFilters, limit }) => {
   if (cleanFilters.category) dbFilter.category = cleanFilters.category;
   if (cleanFilters.semester) dbFilter.semester = cleanFilters.semester;
 
-  const keywordRegex = new RegExp(query.trim(), "i");
+  const keywordRegex = new RegExp(escapeRegex(query.trim()), "i");
   const fallbackDocs = await Resource.find({
     ...dbFilter,
     $or: [
@@ -43,8 +45,14 @@ const fallbackSearch = async ({ query, cleanFilters, limit }) => {
 const performSemanticSearch = async (req, res) => {
   try {
     const { query, filters, limit = 10 } = req.body;
+    const normalizedQuery = normalizeString(query, { maxLength: 500 });
+    const normalizedLimit = parseBoundedInteger(limit, {
+      min: 1,
+      max: 25,
+      fallback: 10,
+    });
 
-    if (!query || !query.trim()) {
+    if (!normalizedQuery) {
       return res.status(400).json({
         code: "INVALID_INPUT",
         message: "Search query is required",
@@ -55,16 +63,20 @@ const performSemanticSearch = async (req, res) => {
     const cleanFilters = {};
     if (filters) {
       if (filters.department && filters.department.trim()) {
-        cleanFilters.department = filters.department;
+        cleanFilters.department = normalizeString(filters.department, { maxLength: 100 });
       }
       if (filters.subject && filters.subject.trim()) {
-        cleanFilters.subject = filters.subject;
+        cleanFilters.subject = normalizeString(filters.subject, { maxLength: 100 });
       }
       if (filters.category && filters.category.trim()) {
-        cleanFilters.category = filters.category;
+        cleanFilters.category = normalizeString(filters.category, { maxLength: 50 });
       }
       if (filters.semester) {
-        cleanFilters.semester = filters.semester;
+        cleanFilters.semester = parseBoundedInteger(filters.semester, {
+          min: 1,
+          max: 12,
+          fallback: undefined,
+        });
       }
     }
 
@@ -73,8 +85,8 @@ const performSemanticSearch = async (req, res) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        query,
-        limit,
+        query: normalizedQuery,
+        limit: normalizedLimit,
         offset: 0,
         filters: Object.keys(cleanFilters).length > 0 ? cleanFilters : null,
       }),
@@ -83,7 +95,11 @@ const performSemanticSearch = async (req, res) => {
     if (!aiResponse.ok) {
       const errorData = await aiResponse.json().catch(() => ({}));
       logger.error("AI service search error:", errorData);
-      const resources = await fallbackSearch({ query, cleanFilters, limit });
+      const resources = await fallbackSearch({
+        query: normalizedQuery,
+        cleanFilters,
+        limit: normalizedLimit,
+      });
       return res.json({
         code: "SUCCESS",
         data: {
@@ -117,7 +133,11 @@ const performSemanticSearch = async (req, res) => {
     // If AI service returns zero materialized resources, fall back to DB text search.
     // This keeps UX working when embeddings are stale or ID formats mismatch.
     if (resources.length === 0) {
-      resources = await fallbackSearch({ query, cleanFilters, limit });
+      resources = await fallbackSearch({
+        query: normalizedQuery,
+        cleanFilters,
+        limit: normalizedLimit,
+      });
       usedFallback = true;
     }
 
@@ -135,12 +155,22 @@ const performSemanticSearch = async (req, res) => {
     logger.error("Search proxy error:", error);
     const { query = "", filters, limit = 10 } = req.body || {};
     const cleanFilters = {};
-    if (filters?.department) cleanFilters.department = filters.department;
-    if (filters?.subject) cleanFilters.subject = filters.subject;
-    if (filters?.category) cleanFilters.category = filters.category;
-    if (filters?.semester) cleanFilters.semester = filters.semester;
+    if (filters?.department) cleanFilters.department = normalizeString(filters.department, { maxLength: 100 });
+    if (filters?.subject) cleanFilters.subject = normalizeString(filters.subject, { maxLength: 100 });
+    if (filters?.category) cleanFilters.category = normalizeString(filters.category, { maxLength: 50 });
+    if (filters?.semester) {
+      cleanFilters.semester = parseBoundedInteger(filters.semester, {
+        min: 1,
+        max: 12,
+        fallback: undefined,
+      });
+    }
 
-    const resources = await fallbackSearch({ query, cleanFilters, limit });
+    const resources = await fallbackSearch({
+      query: normalizeString(query, { maxLength: 500 }),
+      cleanFilters,
+      limit: parseBoundedInteger(limit, { min: 1, max: 25, fallback: 10 }),
+    });
     res.json({
       code: "SUCCESS",
       data: {
@@ -169,9 +199,9 @@ router.post("/semantic", performSemanticSearch);
 /**
  * @route   POST /api/v1/search/index-all
  * @desc    Trigger bulk indexing of all existing resources in the AI service
- * @access  Public
+ * @access  Private (admin only)
  */
-router.post("/index-all", async (req, res) => {
+router.post("/index-all", authMiddleware, requireRole("admin"), async (req, res) => {
   try {
     const aiResponse = await fetch(
       `${AI_SERVICE_URL}/api/v1/search/index-all`,

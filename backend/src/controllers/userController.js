@@ -1,5 +1,10 @@
 import { User } from '../models/User.js';
 import { logger } from '../config/logger.js';
+import {
+  normalizeString,
+  parseBoundedInteger,
+  safeJsonError,
+} from "../utils/security.js";
 
 /**
  * Get user profile
@@ -64,15 +69,26 @@ export const updateProfile = async (req, res) => {
 
     // Update only allowed fields
     const updateData = {};
-    if (name) updateData.name = name;
-    if (bio) updateData.bio = bio;
-    if (avatar) updateData.avatar = avatar;
-    if (department) updateData.department = department;
-    if (university) updateData.university = university;
+    if (name) updateData.name = normalizeString(name, { maxLength: 100 });
+    if (bio) updateData.bio = normalizeString(bio, { maxLength: 1000 });
+    if (avatar) updateData.avatar = normalizeString(avatar, { maxLength: 500 });
+    if (department) updateData.department = normalizeString(department, { maxLength: 100 });
+    if (university) updateData.university = normalizeString(university, { maxLength: 150 });
     if (semester !== undefined) {
-      updateData.semester = Number.isFinite(Number(semester))
-        ? Number(semester)
-        : semester;
+      const normalizedSemester = parseBoundedInteger(semester, {
+        min: 1,
+        max: 12,
+        fallback: null,
+      });
+
+      if (normalizedSemester == null) {
+        return res.status(400).json({
+          code: "VALIDATION_ERROR",
+          message: "Semester must be a number between 1 and 12",
+        });
+      }
+
+      updateData.semester = normalizedSemester;
     }
 
     const updatedUser = await User.findByIdAndUpdate(
@@ -111,11 +127,7 @@ export const updateProfile = async (req, res) => {
     });
   } catch (error) {
     logger.error('Update profile error:', error);
-    res.status(500).json({
-      code: 'UPDATE_ERROR',
-      message: 'Failed to update user profile',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    return safeJsonError(res, 500, "UPDATE_ERROR", "Failed to update user profile", error);
   }
 };
 
@@ -154,10 +166,12 @@ export const getUserById = async (req, res) => {
     });
   } catch (error) {
     logger.error('Get user by ID error:', error);
-    res.status(500).json({
-      code: 'PROFILE_ERROR',
-      message: 'Failed to retrieve user profile',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    return safeJsonError(
+      res,
+      500,
+      "PROFILE_ERROR",
+      "Failed to retrieve user profile",
+      error,
+    );
   }
 };

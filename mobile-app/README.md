@@ -32,8 +32,7 @@ npm install
 Create `.env.local` file:
 
 ```
-EXPO_PUBLIC_API_URL=http://localhost:3000/api/v1
-EXPO_PUBLIC_AI_SERVICE_URL=http://localhost:8000
+EXPO_PUBLIC_API_BASE_URL=http://localhost:3000/api/v1
 EXPO_PUBLIC_FIREBASE_CONFIG={"your":"firebase_config"}
 ```
 

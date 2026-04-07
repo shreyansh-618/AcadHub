@@ -2,7 +2,21 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { authService } from '@/services/auth';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:3000';
+const ALLOWED_FILE_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+]);
 
 export default function UploadDocumentModal({ onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
@@ -51,6 +65,10 @@ export default function UploadDocumentModal({ onClose, onSuccess }) {
       // Validate file size (max 50MB)
       if (selectedFile.size > 50 * 1024 * 1024) {
         toast.error('File size must be less than 50MB');
+        return;
+      }
+      if (!ALLOWED_FILE_TYPES.has(selectedFile.type)) {
+        toast.error('Unsupported file type');
         return;
       }
       setFile(selectedFile);
@@ -262,10 +280,10 @@ export default function UploadDocumentModal({ onClose, onSuccess }) {
                 type="file"
                 onChange={handleFileChange}
                 className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500 file:mr-4 file:bg-blue-500 file:text-white file:border-0 file:rounded file:cursor-pointer"
-                accept=".pdf,.doc,.docx,.pptx,.txt,.xls,.xlsx"
+                accept=".pdf,.doc,.docx,.pptx,.txt,.jpg,.jpeg,.png,.gif,.webp"
               />
               <p className="text-xs text-slate-400 mt-1">
-                Max 50MB. Supported: PDF, DOC, DOCX, PPTX, TXT, XLS, XLSX
+                Max 50MB. Supported: PDF, DOC, DOCX, PPTX, TXT, JPG, PNG, GIF, WEBP
               </p>
             </div>
             {file && (

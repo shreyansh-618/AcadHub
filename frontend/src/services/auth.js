@@ -145,6 +145,7 @@ export const authService = {
    */
   async logout() {
     try {
+      await apiClient.post('/auth/logout');
       await signOut(auth);
       localStorage.removeItem('authToken');
     } catch (error) {

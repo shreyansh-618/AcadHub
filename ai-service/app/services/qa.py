@@ -3,12 +3,13 @@ import asyncio
 from datetime import datetime
 from typing import List, Optional, Dict, Tuple
 from hashlib import md5
-import os
 import re
 from openai import OpenAI, RateLimitError, APIError
 import numpy as np
 from bson import ObjectId
 
+from app.services.cache import TTLCache
+from app.config.settings import settings
 from app.services.embedding import embedding_service
 from app.services.chunking import ChunkingService
 
@@ -69,11 +70,16 @@ class RAGService:
 
     def __init__(self, db_client):
         self.db = db_client
-        self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.openai_client = (
+            OpenAI(api_key=settings.openai_api_key)
+            if settings.openai_api_key
+            else None
+        )
         self.chunking_service = ChunkingService()
-        self.cache_ttl = 86400  # 24 hours
+        self.cache_ttl = settings.cache_ttl_seconds
         self.max_retries = 3
         self.retry_delay = 2
+        self.embedding_cache = TTLCache(ttl_seconds=900, max_items=256)
 
     def _get_database(self):
         """Return connected motor database object."""
@@ -106,7 +112,10 @@ class RAGService:
             started_at = datetime.now()
 
             # 2. Convert question to embedding
-            question_embedding = embedding_service.encode(question)
+            question_embedding = self.embedding_cache.get(question)
+            if question_embedding is None:
+                question_embedding = await asyncio.to_thread(embedding_service.encode, question)
+                self.embedding_cache.set(question, question_embedding)
             if question_embedding is None:
                 raise ValueError("Failed to generate question embedding")
 
@@ -139,7 +148,7 @@ class RAGService:
             answer_label = "AI Answer"
             try:
                 answer = await self._call_openai(question, context)
-            except (RateLimitError, APIError) as openai_error:
+            except (RateLimitError, APIError, RuntimeError) as openai_error:
                 logger.warning(
                     "Falling back to extractive QA because OpenAI is unavailable: %s",
                     str(openai_error),
@@ -486,6 +495,9 @@ class RAGService:
         """
         Call OpenAI API with RAG prompt and retry logic.
         """
+        if self.openai_client is None:
+            raise RuntimeError("OpenAI client is not configured")
+
         prompt = f"""Use only the provided academic content to answer the question.
 
 Rules:
@@ -503,10 +515,10 @@ USER QUESTION:
 
 ANSWER:"""
 
-        for attempt in range(self.max_retries):
+        for attempt in range(settings.openai_retries):
             try:
                 response = self.openai_client.chat.completions.create(
-                    model="gpt-3.5-turbo",
+                    model=settings.openai_model,
                     messages=[
                         {
                             "role": "system",
@@ -517,9 +529,9 @@ ANSWER:"""
                             "content": prompt,
                         },
                     ],
-                    max_tokens=500,
+                    max_tokens=settings.openai_max_tokens,
                     temperature=0.2,
-                    timeout=30,
+                    timeout=settings.request_timeout_seconds,
                 )
 
                 answer = response.choices[0].message.content
@@ -528,16 +540,23 @@ ANSWER:"""
                 return answer
 
             except RateLimitError:
-                if attempt < self.max_retries - 1:
-                    wait_time = self.retry_delay ** (attempt + 1)
+                if attempt < settings.openai_retries - 1:
+                    wait_time = settings.openai_retry_base_delay_seconds ** (attempt + 1)
                     logger.warning(f"Rate limited. Retrying in {wait_time}s...")
                     await asyncio.sleep(wait_time)
                 else:
                     raise
             except APIError as e:
-                if attempt < self.max_retries - 1:
-                    wait_time = self.retry_delay ** (attempt + 1)
+                if attempt < settings.openai_retries - 1:
+                    wait_time = settings.openai_retry_base_delay_seconds ** (attempt + 1)
                     logger.warning(f"API error: {e}. Retrying in {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    raise
+            except Exception as e:
+                if attempt < settings.openai_retries - 1:
+                    wait_time = settings.openai_retry_base_delay_seconds ** (attempt + 1)
+                    logger.warning(f"Unexpected OpenAI error: {e}. Retrying in {wait_time}s...")
                     await asyncio.sleep(wait_time)
                 else:
                     raise

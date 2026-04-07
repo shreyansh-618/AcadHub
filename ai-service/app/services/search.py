@@ -1,8 +1,11 @@
 from typing import List, Dict, Optional
 import logging
+import asyncio
+import json
 from app.config.database import get_db
 from app.services.embedding import embedding_service
 from app.services.chunking import ChunkingService
+from app.services.cache import TTLCache
 from app.models.schemas import SearchResult
 from bson import ObjectId
 import numpy as np
@@ -16,6 +19,8 @@ class SearchService:
 
     def __init__(self):
         self.chunking_service = ChunkingService()
+        self.embedding_cache = TTLCache(ttl_seconds=900, max_items=256)
+        self.search_cache = TTLCache(ttl_seconds=120, max_items=256)
     
     async def search(
         self,
@@ -31,6 +36,20 @@ class SearchService:
         start_time = time.time()
         
         try:
+            cache_key = json.dumps(
+                {
+                    "query": query,
+                    "limit": limit,
+                    "offset": offset,
+                    "filters": filters or {},
+                },
+                sort_keys=True,
+            )
+            cached_result = self.search_cache.get(cache_key)
+            if cached_result is not None:
+                logger.info("Search cache hit for query: %s", query[:50])
+                return cached_result
+
             db = get_db()
             
             if db is None:
@@ -39,7 +58,10 @@ class SearchService:
             
             # Get embedding for the query
             logger.info(f"Getting embedding for query: {query[:50]}...")
-            query_embedding = embedding_service.get_embedding(query)
+            query_embedding = self.embedding_cache.get(query)
+            if query_embedding is None:
+                query_embedding = await asyncio.to_thread(embedding_service.get_embedding, query)
+                self.embedding_cache.set(query, query_embedding)
             logger.info(f"Query embedding generated successfully. Dimension: {len(query_embedding)}")
             
             # Build filter query
@@ -178,7 +200,9 @@ class SearchService:
             
             processing_time = time.time() - start_time
             logger.info(f"Search completed successfully. Results: {len(search_results)}, Time: {processing_time:.2f}s")
-            return search_results, total, processing_time
+            result = (search_results, total, processing_time)
+            self.search_cache.set(cache_key, result)
+            return result
             
         except Exception as e:
             logger.error(f"Search error: {e}", exc_info=True)

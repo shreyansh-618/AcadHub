@@ -1,10 +1,12 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 from typing import List, Optional
 import logging
 from app.services.qa import RAGService
 import os
 from datetime import datetime
+from app.config.settings import settings
+from app.utils.sanitize import sanitize_text
 
 router = APIRouter(prefix="/qa", tags=["QA"])
 logger = logging.getLogger(__name__)
@@ -15,22 +17,22 @@ rag_service = None
 
 # Pydantic models
 class QuestionRequest(BaseModel):
-    question: str
+    question: str = Field(..., min_length=1, max_length=500)
     resource_ids: Optional[List[str]] = None
 
 
 class QAInteractionRequest(BaseModel):
-    userId: str
-    question: str
-    answer: str
+    userId: str = Field(..., min_length=1, max_length=128)
+    question: str = Field(..., min_length=1, max_length=500)
+    answer: str = Field(..., min_length=1, max_length=10000)
     sources: List[dict]
     processingTime: int
     resourceIds: List[str] = []
 
 
 class RatingRequest(BaseModel):
-    question_id: str
-    user_id: str
+    question_id: str = Field(..., min_length=1, max_length=128)
+    user_id: str = Field(..., min_length=1, max_length=128)
     rating: str  # "helpful" or "not-helpful"
 
 
@@ -53,13 +55,17 @@ async def answer_question(
     Uses RAG (Retrieval-Augmented Generation) pipeline.
     """
     try:
-        if not request.question or len(request.question.strip()) == 0:
+        normalized_question = sanitize_text(
+            request.question,
+            max_length=settings.max_input_length,
+        )
+        if not normalized_question:
             raise HTTPException(status_code=400, detail="Question cannot be empty")
 
-        if len(request.question) > 500:
+        if len(normalized_question) > 500:
             raise HTTPException(status_code=400, detail="Question too long (max 500 characters)")
 
-        logger.info(f"Processing question: {request.question[:100]}")
+        logger.info(f"Processing question: {normalized_question[:100]}")
 
         # Get or initialize RAG service
         global rag_service
@@ -68,7 +74,7 @@ async def answer_question(
 
         # Generate answer using RAG pipeline
         result = await rag_service.generate_answer(
-            question=request.question,
+            question=normalized_question,
             resource_ids=request.resource_ids,
         )
 
@@ -106,8 +112,8 @@ async def store_interaction(
 
         await rag_service.store_interaction(
             user_id=request.userId,
-            question=request.question,
-            answer=request.answer,
+            question=sanitize_text(request.question, max_length=settings.max_input_length),
+            answer=sanitize_text(request.answer, max_length=10000),
             sources=request.sources,
             processing_time=request.processingTime,
             resource_ids=request.resourceIds,

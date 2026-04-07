@@ -1,24 +1,31 @@
 import multer from "multer";
+import path from "node:path";
 
 // Use memory storage since we'll upload to GridFS
 const storage = multer.memoryStorage();
 
-const fileFilter = (req, file, cb) => {
-  const allowedMimes = [
-    "application/pdf",
-    "application/msword",
+const allowedFileTypes = {
+  ".pdf": ["application/pdf"],
+  ".doc": ["application/msword"],
+  ".docx": [
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ],
+  ".pptx": [
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "text/plain",
-    "image/jpeg",
-    "image/png",
-    "image/gif",
-    "image/webp",
-  ];
+  ],
+  ".txt": ["text/plain"],
+  ".jpg": ["image/jpeg"],
+  ".jpeg": ["image/jpeg"],
+  ".png": ["image/png"],
+  ".gif": ["image/gif"],
+  ".webp": ["image/webp"],
+};
 
-  if (allowedMimes.includes(file.mimetype)) {
+const fileFilter = (req, file, cb) => {
+  const extension = path.extname(file.originalname || "").toLowerCase();
+  const allowedMimes = allowedFileTypes[extension];
+
+  if (allowedMimes && allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
     cb(

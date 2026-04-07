@@ -1,6 +1,7 @@
 import logging
 from typing import List, Dict
 import time
+import threading
 import yake
 from transformers import pipeline
 
@@ -64,23 +65,24 @@ class TaggingService:
     def __init__(self):
         self.keyword_extractor = None
         self.zero_shot_classifier = None
-        self.load_models()
+        self._load_lock = threading.Lock()
 
     def load_models(self):
         """Load required models"""
-        try:
-            logger.info("Loading tagging models...")
-            # For keyword extraction (YAKE doesn't need loading)
-            # For zero-shot classification
-            self.zero_shot_classifier = pipeline(
-                "zero-shot-classification",
-                model="facebook/bart-large-mnli",
-                device=-1,  # CPU, use 0 for GPU
-            )
-            logger.info("Tagging models loaded successfully")
-        except Exception as e:
-            logger.error(f"Error loading tagging models: {e}")
-            raise
+        with self._load_lock:
+            try:
+                if self.zero_shot_classifier is not None:
+                    return
+                logger.info("Loading tagging models...")
+                self.zero_shot_classifier = pipeline(
+                    "zero-shot-classification",
+                    model="facebook/bart-large-mnli",
+                    device=-1,  # CPU, use 0 for GPU
+                )
+                logger.info("Tagging models loaded successfully")
+            except Exception as e:
+                logger.error(f"Error loading tagging models: {e}")
+                raise
 
     async def extract_tags(
         self,
@@ -99,6 +101,8 @@ class TaggingService:
         """
         try:
             start_time = time.time()
+            if self.zero_shot_classifier is None:
+                self.load_models()
 
             # Step 1: Extract keywords using YAKE (no training needed)
             keywords = self._extract_keywords(text, top_k=10)

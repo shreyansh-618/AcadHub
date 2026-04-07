@@ -1,5 +1,4 @@
 import express from "express";
-import { authMiddleware } from "../middleware/auth.js";
 import { validateQuestion } from "../middleware/validation.js";
 import axios from "axios";
 import { Resource } from "../models/Resource.js";
@@ -7,6 +6,11 @@ import { User } from "../models/User.js";
 import { logger } from "../config/logger.js";
 import { buildResourceContent } from "../services/resourceContent.js";
 import { syncResourceToSemanticIndex } from "../controllers/resourceController.js";
+import {
+  isValidObjectId,
+  normalizeString,
+  parseBoundedInteger,
+} from "../utils/security.js";
 
 const router = express.Router();
 
@@ -14,10 +18,11 @@ const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
 const AI_QA_BASE_URL = `${AI_SERVICE_URL}/qa`;
 
 // POST /api/qa/ask - Ask a question about a resource
-router.post("/ask", authMiddleware, validateQuestion, async (req, res) => {
+router.post("/ask", validateQuestion, async (req, res) => {
   try {
     const { question, resourceId, resourceIds } = req.body;
     const userId = req.user.uid;
+    const normalizedQuestion = normalizeString(question, { maxLength: 500 });
 
     // Verify user exists
     const user = await User.findOne({ uid: userId });
@@ -30,9 +35,23 @@ router.post("/ask", authMiddleware, validateQuestion, async (req, res) => {
     // Get resource IDs to search (if specific resource, use that; otherwise search all)
     let targetResourceIds = [];
     if (Array.isArray(resourceIds) && resourceIds.length > 0) {
-      targetResourceIds = resourceIds;
+      targetResourceIds = resourceIds.filter((id) => isValidObjectId(id)).slice(0, 10);
     } else if (resourceId) {
-      targetResourceIds = [resourceId];
+      targetResourceIds = isValidObjectId(resourceId) ? [resourceId] : [];
+    }
+
+    if (!normalizedQuestion) {
+      return res.status(400).json({
+        success: false,
+        message: "Question must be a non-empty string",
+      });
+    }
+
+    if ((resourceId || resourceIds) && targetResourceIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "One or more resource IDs are invalid",
+      });
     }
 
     if (targetResourceIds.length > 0) {
@@ -74,7 +93,7 @@ router.post("/ask", authMiddleware, validateQuestion, async (req, res) => {
       ragResponse = await axios.post(
         `${AI_QA_BASE_URL}/answer`,
         {
-          question,
+          question: normalizedQuestion,
           resource_ids: targetResourceIds.map((id) => id.toString()),
         },
         {
@@ -113,7 +132,7 @@ router.post("/ask", authMiddleware, validateQuestion, async (req, res) => {
     try {
       await axios.post(`${AI_QA_BASE_URL}/store-interaction`, {
         userId,
-        question,
+        question: normalizedQuestion,
         answer: ragResponse.data.answer,
         sources: ragResponse.data.sources,
         processingTime,
@@ -151,10 +170,14 @@ router.post("/ask", authMiddleware, validateQuestion, async (req, res) => {
 });
 
 // GET /api/qa/history - Get user's question history
-router.get("/history", authMiddleware, async (req, res) => {
+router.get("/history", async (req, res) => {
   try {
     const userId = req.user.uid;
-    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const limit = parseBoundedInteger(req.query.limit, {
+      min: 1,
+      max: 50,
+      fallback: 10,
+    });
 
     const history = await axios.get(`${AI_QA_BASE_URL}/user-history`, {
       params: {
@@ -177,7 +200,7 @@ router.get("/history", authMiddleware, async (req, res) => {
 });
 
 // POST /api/qa/rate - Rate an answer
-router.post("/rate", authMiddleware, async (req, res) => {
+router.post("/rate", async (req, res) => {
   try {
     const { questionId, rating } = req.body;
     const userId = req.user.uid;
@@ -209,7 +232,7 @@ router.post("/rate", authMiddleware, async (req, res) => {
 });
 
 // POST /api/qa/store-interaction - store interaction (non-critical)
-router.post("/store-interaction", authMiddleware, async (req, res) => {
+router.post("/store-interaction", async (req, res) => {
   try {
     const {
       question,
@@ -219,8 +242,10 @@ router.post("/store-interaction", authMiddleware, async (req, res) => {
       resourceIds = [],
     } = req.body;
     const userId = req.user.uid;
+    const normalizedQuestion = normalizeString(question, { maxLength: 500 });
+    const normalizedAnswer = normalizeString(answer, { maxLength: 10000 });
 
-    if (!question || !answer) {
+    if (!normalizedQuestion || !normalizedAnswer) {
       return res.status(400).json({
         success: false,
         message: "question and answer are required",
@@ -229,11 +254,13 @@ router.post("/store-interaction", authMiddleware, async (req, res) => {
 
     await axios.post(`${AI_QA_BASE_URL}/store-interaction`, {
       userId,
-      question,
-      answer,
+      question: normalizedQuestion,
+      answer: normalizedAnswer,
       sources,
       processingTime: Number(processingTime) || 0,
-      resourceIds: Array.isArray(resourceIds) ? resourceIds : [],
+      resourceIds: Array.isArray(resourceIds)
+        ? resourceIds.filter((id) => isValidObjectId(id)).slice(0, 10)
+        : [],
     });
 
     return res.json({ success: true, message: "Interaction stored" });

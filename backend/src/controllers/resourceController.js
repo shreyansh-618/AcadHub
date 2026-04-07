@@ -1,5 +1,4 @@
 import { Resource } from "../models/Resource.js";
-import { User } from "../models/User.js";
 import { logger } from "../config/logger.js";
 import { Readable } from "node:stream";
 import {
@@ -7,6 +6,13 @@ import {
   getUploadsFilesCollection,
 } from "../config/database.js";
 import { buildResourceContent } from "../services/resourceContent.js";
+import {
+  normalizeOptionalString,
+  normalizeString,
+  parseBoundedInteger,
+  safeJsonError,
+  sanitizeFilename,
+} from "../utils/security.js";
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
 
@@ -186,6 +192,24 @@ export const uploadResource = async (req, res) => {
     const user = req.user;
     const { title, description, category, subject, semester, academicYear } =
       req.body;
+    const normalizedTitle = normalizeString(title, { maxLength: 200 });
+    const normalizedDescription = normalizeString(description, { maxLength: 2000 });
+    const normalizedSubject = normalizeString(subject, { maxLength: 100 });
+    const normalizedAcademicYear =
+      normalizeOptionalString(academicYear, { maxLength: 20 }) ||
+      new Date().getFullYear().toString();
+    const normalizedSemester = parseBoundedInteger(semester, {
+      min: 1,
+      max: 12,
+      fallback: null,
+    });
+    const allowedCategories = new Set([
+      "lecture-notes",
+      "textbooks",
+      "question-papers",
+      "assignments",
+      "other",
+    ]);
 
     if (!user || !user._id) {
       return res.status(401).json({
@@ -194,10 +218,16 @@ export const uploadResource = async (req, res) => {
       });
     }
 
-    if (!title || !category || !subject || !semester) {
+    if (
+      !normalizedTitle ||
+      !allowedCategories.has(category) ||
+      !normalizedSubject ||
+      normalizedSemester == null
+    ) {
       return res.status(400).json({
         code: "INVALID_INPUT",
-        message: "Missing required fields: title, category, subject, semester",
+        message:
+          "Invalid upload fields. Title, category, subject, and semester are required.",
       });
     }
 
@@ -222,12 +252,21 @@ export const uploadResource = async (req, res) => {
       gif: "image",
       webp: "image",
     };
-    const fileType = typeMapping[fileExt] || "pdf";
+    const fileType = typeMapping[fileExt];
+
+    if (!fileType) {
+      return res.status(400).json({
+        code: "INVALID_FILE_TYPE",
+        message: "Unsupported file type",
+      });
+    }
+
+    const safeFileName = sanitizeFilename(req.file.originalname || "resource");
 
     // Get GridFS instance
     const gfs = getGridFS();
 
-    const writestream = gfs.openUploadStream(req.file.originalname, {
+    const writestream = gfs.openUploadStream(safeFileName, {
       metadata: {
         uploadedBy: user._id,
         uploadedByName: user.name,
@@ -244,27 +283,27 @@ export const uploadResource = async (req, res) => {
 
     const extractedContent = await buildResourceContent(
       {
-        title,
-        description,
-        fileName: req.file.originalname,
+        title: normalizedTitle,
+        description: normalizedDescription,
+        fileName: safeFileName,
       },
       req.file.buffer,
     );
 
     // Create resource with GridFS file information
     const resource = await Resource.create({
-      title,
-      description: description || "",
+      title: normalizedTitle,
+      description: normalizedDescription || "",
       category,
-      subject,
-      semester: parseInt(semester),
-      academicYear: academicYear || new Date().getFullYear().toString(),
+      subject: normalizedSubject,
+      semester: normalizedSemester,
+      academicYear: normalizedAcademicYear,
       type: fileType,
       department: user.department || "Computer Science",
       uploadedBy: user._id,
       uploadedByName: user.name,
       fileId, // GridFS file ID
-      fileName: req.file.originalname,
+      fileName: safeFileName,
       fileSize: req.file.size,
       extractedContent,
       isApproved: true, // Auto-approve uploads
@@ -283,10 +322,7 @@ export const uploadResource = async (req, res) => {
     });
   } catch (error) {
     logger.error("Upload resource error:", error);
-    res.status(500).json({
-      code: "UPLOAD_ERROR",
-      message: error.message || "Failed to upload resource",
-    });
+    return safeJsonError(res, 500, "UPLOAD_ERROR", "Failed to upload resource", error);
   }
 };
 
@@ -296,19 +332,21 @@ export const uploadResource = async (req, res) => {
 export const getResources = async (req, res) => {
   try {
     const { page = 1, limit = 10, category, department, subject } = req.query;
+    const safePage = parseBoundedInteger(page, { min: 1, max: 10000, fallback: 1 });
+    const safeLimit = parseBoundedInteger(limit, { min: 1, max: 50, fallback: 10 });
 
     const filter = { isApproved: true };
-    if (category) filter.category = category;
-    if (department) filter.department = department;
-    if (subject) filter.subject = subject;
+    if (category) filter.category = normalizeString(category, { maxLength: 50 });
+    if (department) filter.department = normalizeString(department, { maxLength: 100 });
+    if (subject) filter.subject = normalizeString(subject, { maxLength: 100 });
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const skip = (safePage - 1) * safeLimit;
 
     const resources = await Resource.find(filter)
       .populate("uploadedBy", "name email")
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(safeLimit);
 
     const total = await Resource.countDocuments(filter);
 
@@ -317,19 +355,16 @@ export const getResources = async (req, res) => {
       data: {
         resources,
         pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page: safePage,
+          limit: safeLimit,
           total,
-          pages: Math.ceil(total / parseInt(limit)),
+          pages: Math.ceil(total / safeLimit),
         },
       },
     });
   } catch (error) {
     logger.error("Get resources error:", error);
-    res.status(500).json({
-      code: "FETCH_ERROR",
-      message: error.message || "Failed to fetch resources",
-    });
+    return safeJsonError(res, 500, "FETCH_ERROR", "Failed to fetch resources", error);
   }
 };
 
@@ -357,10 +392,7 @@ export const getUserResources = async (req, res) => {
     });
   } catch (error) {
     logger.error("Get user resources error:", error);
-    res.status(500).json({
-      code: "FETCH_ERROR",
-      message: error.message || "Failed to fetch resources",
-    });
+    return safeJsonError(res, 500, "FETCH_ERROR", "Failed to fetch resources", error);
   }
 };
 
@@ -391,10 +423,13 @@ export const getUserLikedResources = async (req, res) => {
     });
   } catch (error) {
     logger.error("Get liked resources error:", error);
-    res.status(500).json({
-      code: "FETCH_ERROR",
-      message: error.message || "Failed to fetch liked resources",
-    });
+    return safeJsonError(
+      res,
+      500,
+      "FETCH_ERROR",
+      "Failed to fetch liked resources",
+      error,
+    );
   }
 };
 
@@ -426,10 +461,7 @@ export const getResourceById = async (req, res) => {
     });
   } catch (error) {
     logger.error("Get resource error:", error);
-    res.status(500).json({
-      code: "FETCH_ERROR",
-      message: error.message || "Failed to fetch resource",
-    });
+    return safeJsonError(res, 500, "FETCH_ERROR", "Failed to fetch resource", error);
   }
 };
 
@@ -489,10 +521,7 @@ export const generateResourceSummary = async (req, res) => {
     });
   } catch (error) {
     logger.error("Generate summary error:", error);
-    return res.status(500).json({
-      code: "SUMMARY_ERROR",
-      message: error.message || "Failed to generate summary",
-    });
+    return safeJsonError(res, 500, "SUMMARY_ERROR", "Failed to generate summary", error);
   }
 };
 
@@ -500,6 +529,24 @@ export const updateResourceTags = async (req, res) => {
   try {
     const { id } = req.params;
     const inputTags = normalizeGeneratedTags(req.body?.tags);
+    const resource = await Resource.findById(id);
+
+    if (!resource) {
+      return res.status(404).json({
+        code: "NOT_FOUND",
+        message: "Resource not found",
+      });
+    }
+
+    if (
+      resource.uploadedBy.toString() !== req.user._id.toString() &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({
+        code: "FORBIDDEN",
+        message: "You do not have permission to update tags for this resource",
+      });
+    }
 
     if (!inputTags.length) {
       return res.status(400).json({
@@ -508,7 +555,7 @@ export const updateResourceTags = async (req, res) => {
       });
     }
 
-    const resource = await Resource.findByIdAndUpdate(
+    const updatedResource = await Resource.findByIdAndUpdate(
       id,
       {
         $set: {
@@ -519,25 +566,21 @@ export const updateResourceTags = async (req, res) => {
       { new: true },
     );
 
-    if (!resource) {
-      return res.status(404).json({
-        code: "NOT_FOUND",
-        message: "Resource not found",
-      });
-    }
-
     return res.json({
       code: "SUCCESS",
       data: {
-        tags: resource.tags,
+        tags: updatedResource.tags,
       },
     });
   } catch (error) {
     logger.error("Update tags error:", error);
-    return res.status(500).json({
-      code: "TAG_UPDATE_ERROR",
-      message: error.message || "Failed to update tags",
-    });
+    return safeJsonError(
+      res,
+      500,
+      "TAG_UPDATE_ERROR",
+      "Failed to update tags",
+      error,
+    );
   }
 };
 
@@ -595,10 +638,7 @@ export const likeResource = async (req, res) => {
     });
   } catch (error) {
     logger.error("Like resource error:", error);
-    res.status(500).json({
-      code: "OPERATION_ERROR",
-      message: error.message || "Failed to like resource",
-    });
+    return safeJsonError(res, 500, "OPERATION_ERROR", "Failed to like resource", error);
   }
 };
 
@@ -655,10 +695,7 @@ export const deleteResource = async (req, res) => {
     });
   } catch (error) {
     logger.error("Delete resource error:", error);
-    res.status(500).json({
-      code: "DELETION_ERROR",
-      message: error.message || "Failed to delete resource",
-    });
+    return safeJsonError(res, 500, "DELETION_ERROR", "Failed to delete resource", error);
   }
 };
 
@@ -703,6 +740,7 @@ export const downloadResource = async (req, res) => {
 
     // Set response headers
     res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="${resource.fileName}"`,
@@ -711,10 +749,7 @@ export const downloadResource = async (req, res) => {
     readstream.pipe(res);
   } catch (error) {
     logger.error("Download resource error:", error);
-    res.status(500).json({
-      code: "DOWNLOAD_ERROR",
-      message: error.message || "Failed to download resource",
-    });
+    return safeJsonError(res, 500, "DOWNLOAD_ERROR", "Failed to download resource", error);
   }
 };
 
@@ -768,6 +803,7 @@ export const viewResource = async (req, res) => {
     const contentType = contentTypeByExt[extension] || "application/octet-stream";
 
     res.setHeader("Content-Type", contentType);
+    res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader(
       "Content-Disposition",
       `inline; filename="${resource.fileName || "resource"}"`,
@@ -775,9 +811,6 @@ export const viewResource = async (req, res) => {
     readstream.pipe(res);
   } catch (error) {
     logger.error("View resource error:", error?.message || error);
-    res.status(500).json({
-      code: "VIEW_ERROR",
-      message: error.message || "Failed to view resource",
-    });
+    return safeJsonError(res, 500, "VIEW_ERROR", "Failed to view resource", error);
   }
 };

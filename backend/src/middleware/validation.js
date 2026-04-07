@@ -1,4 +1,4 @@
-import { logger } from "../config/logger.js";
+import { isValidObjectId } from "../utils/security.js";
 
 /**
  * Basic validation utility
@@ -29,17 +29,9 @@ const isValidPassword = (password) => {
  * Validation middleware for signup
  */
 export const validateSignup = (req, res, next) => {
-  const { uid, email, name, role, department, university, semester } = req.body;
+  const { name, role } = req.body;
 
   const errors = [];
-
-  if (!isValidUID(uid)) {
-    errors.push("Invalid uid: must be a non-empty string");
-  }
-
-  if (!isValidEmail(email)) {
-    errors.push("Invalid email: must be a valid email address");
-  }
 
   if (!isValidName(name)) {
     errors.push(
@@ -47,8 +39,8 @@ export const validateSignup = (req, res, next) => {
     );
   }
 
-  if (role && !["student", "instructor", "admin"].includes(role)) {
-    errors.push("Invalid role: must be 'student', 'instructor', or 'admin'");
+  if (role && !["student", "faculty", "admin"].includes(role)) {
+    errors.push("Invalid role: must be 'student', 'faculty', or 'admin'");
   }
 
   if (errors.length > 0) {
@@ -66,15 +58,6 @@ export const validateSignup = (req, res, next) => {
  * Validation middleware for login
  */
 export const validateLogin = (req, res, next) => {
-  const { uid } = req.body;
-
-  if (!isValidUID(uid)) {
-    return res.status(400).json({
-      code: "VALIDATION_ERROR",
-      message: "Invalid uid: must be a non-empty string",
-    });
-  }
-
   next();
 };
 
@@ -162,6 +145,19 @@ export const validateSearch = (req, res, next) => {
   next();
 };
 
+export const validateObjectIdParam = (paramName = "id") => (req, res, next) => {
+  const value = req.params?.[paramName];
+
+  if (!isValidObjectId(value)) {
+    return res.status(400).json({
+      code: "VALIDATION_ERROR",
+      message: `Invalid ${paramName}`,
+    });
+  }
+
+  next();
+};
+
 export default {
   isValidEmail,
   isValidUID,
@@ -172,4 +168,5 @@ export default {
   validateQuestion,
   validateResource,
   validateSearch,
+  validateObjectIdParam,
 };

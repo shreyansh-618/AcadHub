@@ -4,6 +4,8 @@ from typing import Optional
 from app.models.schemas import SearchQuery, SearchResponse, EmbeddingRequest, EmbeddingResponse
 from app.services.search import search_service
 from app.config.database import get_db
+from app.config.settings import settings
+from app.utils.sanitize import sanitize_text
 import logging
 import time
 
@@ -26,11 +28,12 @@ class IndexRequest(BaseModel):
 async def semantic_search(query: SearchQuery):
     """Perform semantic search on academic resources"""
     try:
-        if not query.query.strip():
+        normalized_query = sanitize_text(query.query, max_length=settings.max_input_length)
+        if not normalized_query:
             raise HTTPException(status_code=400, detail="Query cannot be empty")
 
         results, total, search_time = await search_service.search(
-            query=query.query,
+            query=normalized_query,
             limit=query.limit,
             offset=query.offset,
             filters=query.filters,
@@ -41,7 +44,7 @@ async def semantic_search(query: SearchQuery):
             total=total,
             page=(query.offset // query.limit) + 1 if query.limit > 0 else 1,
             limit=query.limit,
-            query=query.query,
+            query=normalized_query,
             processing_time=search_time,
         )
 
@@ -56,12 +59,13 @@ async def semantic_search(query: SearchQuery):
 async def get_embedding(request: EmbeddingRequest):
     """Get embedding for a text"""
     try:
-        if not request.text.strip():
+        normalized_text = sanitize_text(request.text, max_length=settings.max_input_length)
+        if not normalized_text:
             raise HTTPException(status_code=400, detail="Text cannot be empty")
 
         from app.services.embedding import embedding_service
         embedding_service.load_model()
-        embedding = embedding_service.get_embedding(request.text)
+        embedding = embedding_service.get_embedding(normalized_text)
         dimension = embedding_service.get_dimension()
 
         return EmbeddingResponse(

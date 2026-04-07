@@ -15,8 +15,10 @@ import {
 import { rateLimiter } from "./rateLimiter";
 
 function getApiBaseUrl() {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    const configuredUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL) {
+    const configuredUrl =
+      process.env.EXPO_PUBLIC_API_BASE_URL ||
+      process.env.EXPO_PUBLIC_API_URL;
 
     if (Platform.OS === "android") {
       return configuredUrl
@@ -222,6 +224,7 @@ export const authService = {
 
   async logout() {
     try {
+      await apiClient.post("/auth/logout");
       await AsyncStorage.removeItem("authToken");
       const auth = getFirebaseAuthInstance();
       await signOut(auth);

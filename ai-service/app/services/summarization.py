@@ -1,10 +1,10 @@
 import logging
 from typing import List, Dict
 import time
-import os
 from openai import OpenAI
 from transformers import pipeline
-import asyncio
+
+from app.config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +15,10 @@ class SummarizationService:
     def __init__(self):
         self.openai_client = None
         self.bart_pipeline = None
-        self.use_openai = bool(os.getenv("OPENAI_API_KEY"))
-        
+        self.use_openai = bool(settings.openai_api_key)
+
         if self.use_openai:
-            self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            self.openai_client = OpenAI(api_key=settings.openai_api_key)
             logger.info("OpenAI summarization enabled")
         else:
             logger.info("Using local BART summarizer (free alternative)")
@@ -82,7 +82,8 @@ class SummarizationService:
                             {"role": "user", "content": chunk},
                         ],
                         max_tokens=max_length,
-                        temperature=0.7,
+                        temperature=settings.openai_temperature,
+                        timeout=settings.request_timeout_seconds,
                     )
                     summaries.append(response.choices[0].message.content)
 
@@ -98,7 +99,8 @@ class SummarizationService:
                         {"role": "user", "content": text},
                     ],
                     max_tokens=max_length,
-                    temperature=0.7,
+                    temperature=settings.openai_temperature,
+                    timeout=settings.request_timeout_seconds,
                 )
 
                 return {"summary": response.choices[0].message.content}

@@ -14,6 +14,7 @@ import {
 } from '../controllers/resourceController.js';
 import { authMiddleware } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
+import { validateObjectIdParam } from "../middleware/validation.js";
 
 const router = express.Router();
 
@@ -50,47 +51,52 @@ router.get('/my-likes', authMiddleware, getUserLikedResources);
  * @desc    Download resource file
  * @access  Public
  */
-router.get('/:id/download', downloadResource);
+router.get('/:id/download', validateObjectIdParam("id"), downloadResource);
 
 /**
  * @route   GET /api/v1/resources/:id/view
  * @desc    View resource file inline
  * @access  Public
  */
-router.get('/:id/view', viewResource);
+router.get('/:id/view', validateObjectIdParam("id"), viewResource);
 
 /**
  * @route   GET /api/v1/resources/:id
  * @desc    Get resource by ID
  * @access  Public
  */
-router.get('/:id', getResourceById);
+router.get('/:id', validateObjectIdParam("id"), getResourceById);
 
 /**
  * @route   POST /api/v1/resources/:id/generate-summary
  * @desc    Generate and cache an AI summary for a resource
  * @access  Private
  */
-router.post('/:id/generate-summary', authMiddleware, generateResourceSummary);
+router.post(
+  '/:id/generate-summary',
+  authMiddleware,
+  validateObjectIdParam("id"),
+  generateResourceSummary,
+);
 
 /**
  * @route   PATCH /api/v1/resources/:id/tags
  * @desc    Update resource tags
  * @access  Private
  */
-router.patch('/:id/tags', authMiddleware, updateResourceTags);
+router.patch('/:id/tags', authMiddleware, validateObjectIdParam("id"), updateResourceTags);
 
 /**
  * @route   POST /api/v1/resources/:id/like
  * @desc    Like/unlike a resource
  * @access  Private
  */
-router.post('/:id/like', authMiddleware, likeResource);
+router.post('/:id/like', authMiddleware, validateObjectIdParam("id"), likeResource);
 
 /**
  * @desc    Delete a resource
  * @access  Private
  */
-router.delete('/:id', authMiddleware, deleteResource);
+router.delete('/:id', authMiddleware, validateObjectIdParam("id"), deleteResource);
 
 export default router;
