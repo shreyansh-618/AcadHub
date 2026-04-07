@@ -1,9 +1,9 @@
-fastapi
-uvicorn[standard]
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
 pymongo>=4.14.0
 motor>=3.3.0
 transformers
-sentence-transformers
+sentence-transformers>=2.2.0
 scipy
 pydantic
 pydantic-settings
@@ -12,6 +12,6 @@ httpx
 numpy
 openai>=1.0.0
 yake>=0.3.2
-torch
+torch --extra-index-url https://download.pytorch.org/whl/cpu
 pdfplumber>=0.10.0
 gunicorn
