@@ -12,6 +12,5 @@ httpx
 numpy
 openai>=1.0.0
 yake>=0.3.2
-torch --extra-index-url https://download.pytorch.org/whl/cpu
 pdfplumber>=0.10.0
 gunicorn
