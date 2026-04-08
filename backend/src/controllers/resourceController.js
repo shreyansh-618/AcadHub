@@ -13,8 +13,10 @@ import {
   safeJsonError,
   sanitizeFilename,
 } from "../utils/security.js";
-
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
+import {
+  AI_SERVICE_URL,
+  getAiServiceFetchOptions,
+} from "../utils/aiService.js";
 
 const ensureGridFsFileExists = async (fileId) => {
   const filesCollection = getUploadsFilesCollection();
@@ -36,8 +38,10 @@ const enrichResourceWithDocumentIntelligence = async (resource, textForAI) => {
 
     const [summaryResp, tagsResp] = await Promise.allSettled([
       fetch(`${AI_SERVICE_URL}/document-intelligence/summarize`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        ...getAiServiceFetchOptions({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }),
         signal: controller.signal,
         body: JSON.stringify({
           text: textForAI,
@@ -46,8 +50,10 @@ const enrichResourceWithDocumentIntelligence = async (resource, textForAI) => {
         }),
       }),
       fetch(`${AI_SERVICE_URL}/document-intelligence/tag`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        ...getAiServiceFetchOptions({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }),
         signal: controller.signal,
         body: JSON.stringify({
           text: textForAI,
@@ -114,8 +120,10 @@ export const syncResourceToSemanticIndex = async (resource, indexableContent = "
     };
 
     const response = await fetch(`${AI_SERVICE_URL}/api/v1/search/index`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      ...getAiServiceFetchOptions({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }),
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
@@ -143,10 +151,10 @@ const removeResourceFromSemanticIndex = async (resourceId) => {
 
     const response = await fetch(
       `${AI_SERVICE_URL}/api/v1/search/index/${resourceId}`,
-      {
+      getAiServiceFetchOptions({
         method: "DELETE",
         signal: controller.signal,
-      },
+      }),
     );
 
     clearTimeout(timeoutId);
@@ -488,8 +496,10 @@ export const generateResourceSummary = async (req, res) => {
     }
 
     const response = await fetch(`${AI_SERVICE_URL}/document-intelligence/summarize`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      ...getAiServiceFetchOptions({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }),
       body: JSON.stringify({
         text: extractedContent,
         max_length: 180,

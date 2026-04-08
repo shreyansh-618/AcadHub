@@ -11,10 +11,12 @@ import {
   normalizeString,
   parseBoundedInteger,
 } from "../utils/security.js";
+import {
+  AI_SERVICE_URL,
+  getAiServiceAxiosConfig,
+} from "../utils/aiService.js";
 
 const router = express.Router();
-
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
 const AI_QA_BASE_URL = `${AI_SERVICE_URL}/qa`;
 
 // POST /api/qa/ask - Ask a question about a resource
@@ -96,9 +98,9 @@ router.post("/ask", validateQuestion, async (req, res) => {
           question: normalizedQuestion,
           resource_ids: targetResourceIds.map((id) => id.toString()),
         },
-        {
+        getAiServiceAxiosConfig({
           timeout: 45000, // 45 second timeout
-        },
+        }),
       );
     } catch (error) {
       logger.error("AI Service error:", error.message);
@@ -130,14 +132,18 @@ router.post("/ask", validateQuestion, async (req, res) => {
 
     // Store QA interaction in database
     try {
-      await axios.post(`${AI_QA_BASE_URL}/store-interaction`, {
-        userId,
-        question: normalizedQuestion,
-        answer: ragResponse.data.answer,
-        sources: ragResponse.data.sources,
-        processingTime,
-        resourceIds: targetResourceIds,
-      });
+      await axios.post(
+        `${AI_QA_BASE_URL}/store-interaction`,
+        {
+          userId,
+          question: normalizedQuestion,
+          answer: ragResponse.data.answer,
+          sources: ragResponse.data.sources,
+          processingTime,
+          resourceIds: targetResourceIds,
+        },
+        getAiServiceAxiosConfig(),
+      );
     } catch (error) {
       logger.warn("Failed to store QA interaction:", error.message);
       // Don't fail the request if storage fails
@@ -179,12 +185,15 @@ router.get("/history", async (req, res) => {
       fallback: 10,
     });
 
-    const history = await axios.get(`${AI_QA_BASE_URL}/user-history`, {
-      params: {
-        user_id: userId,
-        limit,
-      },
-    });
+    const history = await axios.get(
+      `${AI_QA_BASE_URL}/user-history`,
+      getAiServiceAxiosConfig({
+        params: {
+          user_id: userId,
+          limit,
+        },
+      }),
+    );
 
     res.json({
       success: true,
@@ -212,11 +221,15 @@ router.post("/rate", async (req, res) => {
       });
     }
 
-    await axios.post(`${AI_QA_BASE_URL}/rate-answer`, {
-      question_id: questionId,
-      user_id: userId,
-      rating,
-    });
+    await axios.post(
+      `${AI_QA_BASE_URL}/rate-answer`,
+      {
+        question_id: questionId,
+        user_id: userId,
+        rating,
+      },
+      getAiServiceAxiosConfig(),
+    );
 
     res.json({
       success: true,
@@ -252,16 +265,20 @@ router.post("/store-interaction", async (req, res) => {
       });
     }
 
-    await axios.post(`${AI_QA_BASE_URL}/store-interaction`, {
-      userId,
-      question: normalizedQuestion,
-      answer: normalizedAnswer,
-      sources,
-      processingTime: Number(processingTime) || 0,
-      resourceIds: Array.isArray(resourceIds)
-        ? resourceIds.filter((id) => isValidObjectId(id)).slice(0, 10)
-        : [],
-    });
+    await axios.post(
+      `${AI_QA_BASE_URL}/store-interaction`,
+      {
+        userId,
+        question: normalizedQuestion,
+        answer: normalizedAnswer,
+        sources,
+        processingTime: Number(processingTime) || 0,
+        resourceIds: Array.isArray(resourceIds)
+          ? resourceIds.filter((id) => isValidObjectId(id)).slice(0, 10)
+          : [],
+      },
+      getAiServiceAxiosConfig(),
+    );
 
     return res.json({ success: true, message: "Interaction stored" });
   } catch (error) {

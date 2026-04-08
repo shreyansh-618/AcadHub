@@ -1,7 +1,9 @@
 import axios from "axios";
 import { logger } from "../config/logger.js";
-
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
+import {
+  AI_SERVICE_URL,
+  getAiServiceAxiosConfig,
+} from "../utils/aiService.js";
 
 /**
  * Service for managing embeddings via AI service
@@ -20,7 +22,7 @@ export const embeddingService = {
       const response = await axios.post(
         `${AI_SERVICE_URL}/api/v1/embed/text`,
         { text },
-        { timeout: 10000 },
+        getAiServiceAxiosConfig({ timeout: 10000 }),
       );
 
       return response.data.embedding;
@@ -42,7 +44,7 @@ export const embeddingService = {
       const response = await axios.post(
         `${AI_SERVICE_URL}/api/v1/embed/batch`,
         { texts },
-        { timeout: 30000 },
+        getAiServiceAxiosConfig({ timeout: 30000 }),
       );
 
       return response.data.embeddings;
@@ -57,9 +59,12 @@ export const embeddingService = {
    */
   async getDimension() {
     try {
-      const response = await axios.get(`${AI_SERVICE_URL}/api/v1/embed/info`, {
-        timeout: 5000,
-      });
+      const response = await axios.get(
+        `${AI_SERVICE_URL}/api/v1/embed/info`,
+        getAiServiceAxiosConfig({
+          timeout: 5000,
+        }),
+      );
 
       return response.data.dimension;
     } catch (error) {

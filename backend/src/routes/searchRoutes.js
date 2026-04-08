@@ -3,10 +3,12 @@ import { logger } from "../config/logger.js";
 import { Resource } from "../models/Resource.js";
 import { authMiddleware, requireRole } from "../middleware/auth.js";
 import { escapeRegex, normalizeString, parseBoundedInteger } from "../utils/security.js";
+import {
+  AI_SERVICE_URL,
+  getAiServiceFetchOptions,
+} from "../utils/aiService.js";
 
 const router = express.Router();
-
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
 
 const fallbackSearch = async ({ query, cleanFilters, limit }) => {
   const dbFilter = { isApproved: true };
@@ -82,8 +84,10 @@ const performSemanticSearch = async (req, res) => {
 
     // Forward request to the AI service
     const aiResponse = await fetch(`${AI_SERVICE_URL}/api/v1/search/semantic`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      ...getAiServiceFetchOptions({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }),
       body: JSON.stringify({
         query: normalizedQuery,
         limit: normalizedLimit,
@@ -205,10 +209,10 @@ router.post("/index-all", authMiddleware, requireRole("admin"), async (req, res)
   try {
     const aiResponse = await fetch(
       `${AI_SERVICE_URL}/api/v1/search/index-all`,
-      {
+      getAiServiceFetchOptions({
         method: "POST",
         headers: { "Content-Type": "application/json" },
-      },
+      }),
     );
 
     if (!aiResponse.ok) {

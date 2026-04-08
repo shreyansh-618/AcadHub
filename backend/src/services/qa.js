@@ -1,7 +1,9 @@
 import axios from "axios";
 import { logger } from "../config/logger.js";
-
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
+import {
+  AI_SERVICE_URL,
+  getAiServiceAxiosConfig,
+} from "../utils/aiService.js";
 
 /**
  * Service for QA operations (question answering with RAG)
@@ -34,9 +36,9 @@ export const qaService = {
       const response = await axios.post(
         `${AI_SERVICE_URL}/api/v1/qa/answer`,
         payload,
-        {
+        getAiServiceAxiosConfig({
           timeout: 60000, // 60s timeout for QA
-        },
+        }),
       );
 
       return {
@@ -78,9 +80,9 @@ export const qaService = {
       await axios.post(
         `${AI_SERVICE_URL}/api/v1/qa/store-interaction`,
         payload,
-        {
+        getAiServiceAxiosConfig({
           timeout: 10000,
-        },
+        }),
       );
 
       logger.info(`QA interaction stored for user: ${userId}`);
@@ -99,11 +101,15 @@ export const qaService = {
         throw new Error("Rating must be 'helpful' or 'not-helpful'");
       }
 
-      await axios.post(`${AI_SERVICE_URL}/api/v1/qa/rate`, {
-        question_id: questionId,
-        user_id: userId,
-        rating,
-      });
+      await axios.post(
+        `${AI_SERVICE_URL}/api/v1/qa/rate`,
+        {
+          question_id: questionId,
+          user_id: userId,
+          rating,
+        },
+        getAiServiceAxiosConfig(),
+      );
 
       logger.info(`Answer rated: ${rating}`);
     } catch (error) {
@@ -118,10 +124,10 @@ export const qaService = {
     try {
       const response = await axios.get(
         `${AI_SERVICE_URL}/api/v1/qa/user/${userId}/history`,
-        {
+        getAiServiceAxiosConfig({
           params: { limit },
           timeout: 10000,
-        },
+        }),
       );
 
       return response.data.questions || [];
