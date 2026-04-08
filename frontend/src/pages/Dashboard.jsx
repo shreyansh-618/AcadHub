@@ -4,11 +4,7 @@ import toast from 'react-hot-toast';
 import { authService } from '@/services/auth';
 import UploadDocumentModal from '@/components/UploadDocumentModal';
 import { apiClient } from '@/services/api';
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  import.meta.env.VITE_API_URL ||
-  'http://localhost:3000';
+import { API_ROOT } from '@/services/urlConfig';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -315,7 +311,7 @@ export default function DashboardPage() {
                   </div>
 
                   <a 
-                    href={`${API_BASE_URL}/api/v1/resources/${doc._id}/download`}
+                    href={`${API_ROOT}/resources/${doc._id}/download`}
                     download
                     target="_blank"
                     rel="noopener noreferrer"

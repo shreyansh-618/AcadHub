@@ -3,15 +3,11 @@
  */
 
 import axios from "axios";
+import { API_ROOT } from "@/services/urlConfig";
 
 // Use the backend API which will forward to AI service
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:3000";
-
 const qaClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_ROOT,
   headers: {
     "Content-Type": "application/json",
   },
@@ -34,7 +30,7 @@ qaClient.interceptors.request.use((config) => {
  */
 export const askQuestion = async (question, resourceIds = []) => {
   try {
-    const response = await qaClient.post("/api/v1/qa/ask", {
+    const response = await qaClient.post("/qa/ask", {
       question,
       resourceIds,
     });
@@ -51,7 +47,7 @@ export const askQuestion = async (question, resourceIds = []) => {
  */
 export const getUserQAHistory = async (limit = 10) => {
   try {
-    const response = await qaClient.get("/api/v1/qa/history", {
+    const response = await qaClient.get("/qa/history", {
       params: { limit: Math.min(limit, 50) },
     });
     return response.data?.data || response.data;
@@ -68,7 +64,7 @@ export const getUserQAHistory = async (limit = 10) => {
  */
 export const rateAnswer = async (interactionId, rating) => {
   try {
-    const response = await qaClient.post("/api/v1/qa/rate", {
+    const response = await qaClient.post("/qa/rate", {
       questionId: interactionId,
       rating,
     });
@@ -85,7 +81,7 @@ export const rateAnswer = async (interactionId, rating) => {
  */
 export const storeInteraction = async (interaction) => {
   try {
-    const response = await qaClient.post("/api/v1/qa/store-interaction", {
+    const response = await qaClient.post("/qa/store-interaction", {
       userId: interaction.userId,
       question: interaction.question,
       answer: interaction.answer,

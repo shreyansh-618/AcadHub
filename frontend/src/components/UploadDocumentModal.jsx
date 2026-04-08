@@ -1,11 +1,7 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { authService } from '@/services/auth';
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  import.meta.env.VITE_API_URL ||
-  'http://localhost:3000';
+import { API_ROOT } from '@/services/urlConfig';
 const ALLOWED_FILE_TYPES = new Set([
   "application/pdf",
   "application/msword",
@@ -115,7 +111,7 @@ export default function UploadDocumentModal({ onClose, onSuccess }) {
       uploadFormData.append('academicYear', formData.academicYear);
       uploadFormData.append('fileSize', file.size);
 
-      const res = await fetch(`${API_BASE_URL}/api/v1/resources`, {
+      const res = await fetch(`${API_ROOT}/resources`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

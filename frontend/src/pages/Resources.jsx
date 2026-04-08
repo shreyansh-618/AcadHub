@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import UploadDocumentModal from '@/components/UploadDocumentModal';
+import { API_ROOT } from '@/services/urlConfig';
 
 export default function Resources() {
   const [resources, setResources] = useState([]);
@@ -39,7 +40,7 @@ export default function Resources() {
     const fetchResources = async () => {
       setLoading(true);
       try {
-        let url = `http://localhost:3000/api/v1/resources?page=${filter.page}&limit=${filter.limit}`;
+        let url = `${API_ROOT}/resources?page=${filter.page}&limit=${filter.limit}`;
         if (filter.category !== 'all') url += `&category=${filter.category}`;
         if (filter.subject !== 'all') url += `&subject=${filter.subject}`;
 
@@ -209,7 +210,7 @@ export default function Resources() {
                   {/* Actions */}
                   <div className="flex gap-2">
                     <a
-                      href={`http://localhost:3000/api/v1/resources/${resource._id}/download`}
+                      href={`${API_ROOT}/resources/${resource._id}/download`}
                       download
                       target="_blank"
                       rel="noopener noreferrer"
