@@ -17,7 +17,7 @@ import {
 } from "../utils/aiService.js";
 
 const router = express.Router();
-const AI_QA_BASE_URL = `${AI_SERVICE_URL}/qa`;
+const AI_QA_BASE_URL = `${AI_SERVICE_URL}/api/v1/qa`;
 
 // POST /api/qa/ask - Ask a question about a resource
 router.post("/ask", validateQuestion, async (req, res) => {
