@@ -1,13 +1,10 @@
 import axios from "axios";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  "http://localhost:3000/api/v1";
+import { API_ROOT } from "./urlConfig";
 
 class ApiClient {
   constructor() {
     this.client = axios.create({
-      baseURL: API_BASE_URL,
+      baseURL: API_ROOT,
       timeout: 30000, // 30 second timeout
       headers: {
         "Content-Type": "application/json",
@@ -29,7 +26,7 @@ class ApiClient {
       (error) => {
         if (!error.response) {
           const networkError = new Error(
-            "Cannot connect to backend server at http://localhost:3000. Start backend and try again.",
+            "Cannot connect to the backend server. Check VITE_API_BASE_URL and try again.",
           );
           networkError.code = "BACKEND_UNREACHABLE";
           return Promise.reject(networkError);

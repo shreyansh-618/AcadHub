@@ -3,11 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { authService } from "@/services/auth";
 import QAInterface from "@/components/QAInterface";
-
-const API_ROOT =
-  import.meta.env.VITE_API_BASE_URL ||
-  "http://localhost:3000/api/v1";
-const SERVER_BASE_URL = API_ROOT.replace(/\/api\/v1\/?$/, "");
+import { SERVER_BASE_URL } from "@/services/urlConfig";
 
 export default function ResourceDetailPage() {
   const { id } = useParams();
@@ -262,9 +258,7 @@ export default function ResourceDetailPage() {
     return resource && ["doc", "docx", "pptx", "xls", "xlsx"].includes(resource.type);
   };
 
-  const isLocalhost =
-    window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1";
+  const canUseGoogleViewer = /^https?:\/\//i.test(SERVER_BASE_URL);
   const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(`${SERVER_BASE_URL}/api/v1/resources/${id}/view`)}&embedded=true`;
 
   const formatBytes = (bytes) => {
@@ -616,7 +610,7 @@ export default function ResourceDetailPage() {
                   Loading text content...
                 </div>
               ) : isOfficeType() ? (
-                !isLocalhost ? (
+                canUseGoogleViewer ? (
                   <div
                     style={{
                       height: fullscreen ? "calc(100vh - 8rem)" : "600px",
@@ -632,12 +626,12 @@ export default function ResourceDetailPage() {
                 ) : (
                   <div className="px-6 py-10 text-center">
                     <div className="mb-4 text-sm font-semibold uppercase tracking-[0.26em] text-slate-500">
-                      Office Preview Limited on Localhost
+                      Office Preview Unavailable
                     </div>
                     <p className="mx-auto mb-6 max-w-xl text-slate-600">
-                      Office files cannot be embedded from localhost. Download the
-                      file or open it through a deployed URL for full in-browser
-                      preview.
+                      Office files need a publicly reachable document URL for
+                      embedded preview. Download the file or open it through
+                      your deployed frontend URL for full in-browser preview.
                     </p>
                     <div className="flex flex-wrap justify-center gap-3">
                       <button onClick={handleDownload} className="btn-primary px-4 py-2 text-sm">

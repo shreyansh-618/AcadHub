@@ -3,11 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import JSZip from "jszip";
 import mammoth from "mammoth";
-
-const API_ROOT =
-  import.meta.env.VITE_API_BASE_URL ||
-  "http://localhost:3000/api/v1";
-const SERVER_BASE_URL = API_ROOT.replace(/\/api\/v1\/?$/, "");
+import { SERVER_BASE_URL } from "@/services/urlConfig";
 
 const decodeXmlEntities = (value = "") =>
   value
