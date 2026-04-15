@@ -14,6 +14,25 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore } from "../../store";
 import { resourceService, analyticsService } from "../../services/api";
 
+const getProcessingStatusMeta = (status) => {
+  switch (status) {
+    case "indexed":
+      return { label: "Indexed", backgroundColor: "#DCFCE7", color: "#166534" };
+    case "processing":
+      return { label: "Processing", backgroundColor: "#FEF3C7", color: "#92400E" };
+    case "pending_embedding":
+      return {
+        label: "Retrying Embedding",
+        backgroundColor: "#FFEDD5",
+        color: "#9A3412",
+      };
+    case "failed":
+      return { label: "Index Failed", backgroundColor: "#FEE2E2", color: "#991B1B" };
+    default:
+      return { label: "Pending", backgroundColor: "#E5E7EB", color: "#374151" };
+  }
+};
+
 const ProfileScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuthStore();
@@ -67,44 +86,59 @@ const ProfileScreen = ({ navigation }) => {
     navigation.navigate("resource-detail", { resource });
   };
 
-  const renderResourceItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.resourceCard}
-      onPress={() => handleResourcePress(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.cardHeader}>
-        <MaterialCommunityIcons name="file-document" size={18} color="#007AFF" />
-        <Text style={styles.category}>{item.category}</Text>
-        <View style={styles.spacer} />
-        <Text style={styles.date}>
-          {new Date(item.createdAt).toLocaleDateString()}
+  const renderResourceItem = ({ item }) => {
+    const statusMeta = getProcessingStatusMeta(item.processingStatus);
+
+    return (
+      <TouchableOpacity
+        style={styles.resourceCard}
+        onPress={() => handleResourcePress(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.cardHeader}>
+          <MaterialCommunityIcons name="file-document" size={18} color="#007AFF" />
+          <Text style={styles.category}>{item.category}</Text>
+          <View style={styles.spacer} />
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: statusMeta.backgroundColor },
+            ]}
+          >
+            <Text style={[styles.statusText, { color: statusMeta.color }]}>
+              {statusMeta.label}
+            </Text>
+          </View>
+          <View style={styles.dateSpacer} />
+          <Text style={styles.date}>
+            {new Date(item.createdAt).toLocaleDateString()}
+          </Text>
+        </View>
+
+        <Text style={styles.resourceTitle} numberOfLines={2}>
+          {item.title}
         </Text>
-      </View>
+        <Text style={styles.resourceSubject}>
+          {item.subject || item.metadata?.subject || "General"}
+        </Text>
 
-      <Text style={styles.resourceTitle} numberOfLines={2}>
-        {item.title}
-      </Text>
-      <Text style={styles.resourceSubject}>
-        {item.subject || item.metadata?.subject || "General"}
-      </Text>
-
-      <View style={styles.resourceFooter}>
-        <View style={styles.stat}>
-          <MaterialCommunityIcons name="download" size={12} color="#666" />
-          <Text style={styles.statText}>{item.downloads || 0}</Text>
+        <View style={styles.resourceFooter}>
+          <View style={styles.stat}>
+            <MaterialCommunityIcons name="download" size={12} color="#666" />
+            <Text style={styles.statText}>{item.downloads || 0}</Text>
+          </View>
+          <View style={styles.stat}>
+            <MaterialCommunityIcons name="heart" size={12} color="#FF6B6B" />
+            <Text style={styles.statText}>{item.likes || 0}</Text>
+          </View>
+          <View style={styles.stat}>
+            <MaterialCommunityIcons name="eye" size={12} color="#666" />
+            <Text style={styles.statText}>{item.views || 0}</Text>
+          </View>
         </View>
-        <View style={styles.stat}>
-          <MaterialCommunityIcons name="heart" size={12} color="#FF6B6B" />
-          <Text style={styles.statText}>{item.likes || 0}</Text>
-        </View>
-        <View style={styles.stat}>
-          <MaterialCommunityIcons name="eye" size={12} color="#666" />
-          <Text style={styles.statText}>{item.views || 0}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <ScrollView
@@ -398,6 +432,18 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 11,
     color: "#999",
+  },
+  statusBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  dateSpacer: {
+    width: 6,
   },
   resourceTitle: {
     fontSize: 14,

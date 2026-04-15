@@ -12,6 +12,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
   const [editMode, setEditMode] = useState(false);
+  const [busyDocId, setBusyDocId] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     bio: "",
@@ -134,6 +135,42 @@ export default function ProfilePage() {
     }
   };
 
+  const handleViewDocument = (docId) => {
+    navigate(`/resources/${docId}`);
+  };
+
+  const handleDeleteDocument = async (docId) => {
+    try {
+      setBusyDocId(docId);
+      const firebaseUser = await authService.getCurrentUser();
+      if (!firebaseUser) {
+        navigate("/login");
+        return;
+      }
+
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch(`/api/v1/resources/${docId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.message || "Failed to delete document");
+      }
+
+      setUploadedDocs((prev) => prev.filter((doc) => doc._id !== docId));
+      toast.success("Document deleted successfully");
+    } catch (error) {
+      console.error("Delete document error:", error);
+      toast.error(error.message || "Failed to delete document");
+    } finally {
+      setBusyDocId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="page-shell flex items-center justify-center">
@@ -157,10 +194,19 @@ export default function ProfilePage() {
         <span>{type === "liked" ? `Likes ${doc.likes}` : `Downloads ${doc.downloads}`}</span>
       </div>
       <div className="mt-3 flex gap-2">
-        <button className="btn-outline flex-1 px-3 py-2 text-sm">View</button>
+        <button
+          onClick={() => handleViewDocument(doc._id)}
+          className="btn-outline flex-1 px-3 py-2 text-sm"
+        >
+          View
+        </button>
         {type === "uploaded" && (
-          <button className="rounded-full bg-rose-100 px-3 py-2 text-sm font-semibold text-rose-700">
-            Delete
+          <button
+            onClick={() => handleDeleteDocument(doc._id)}
+            disabled={busyDocId === doc._id}
+            className="rounded-full bg-rose-100 px-3 py-2 text-sm font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {busyDocId === doc._id ? "Deleting..." : "Delete"}
           </button>
         )}
       </div>

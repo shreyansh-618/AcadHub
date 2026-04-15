@@ -102,18 +102,6 @@ const resourceSchema = new mongoose.Schema(
       ref: "User",
     },
     approvedAt: Date,
-    // RAG System - Text chunks for vector search
-    chunks: [
-      {
-        index: Number,
-        text: String,
-        embedding: [Number], // 384-dimensional vector (sentence-transformers/all-MiniLM-L6-v2)
-        pageNumber: Number,
-        tokenCount: Number,
-        charCount: Number,
-        _id: false,
-      },
-    ],
     // AI-generated summary (Week 3+)
     summary: {
       type: String,
@@ -132,6 +120,7 @@ const resourceSchema = new mongoose.Schema(
       type: String,
       enum: [
         "pending",
+        "pending_embedding",
         "processing",
         "chunked",
         "embedded",
@@ -141,6 +130,14 @@ const resourceSchema = new mongoose.Schema(
       default: "pending",
     },
     processingError: String,
+    semanticIndexEligible: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    lastEmbeddingAttemptAt: Date,
+    nextEmbeddingRetryAt: Date,
+    lastIndexedAt: Date,
   },
   {
     timestamps: true,

@@ -1,45 +1,56 @@
 import express from "express";
 import { validateQuestion } from "../middleware/validation.js";
-import axios from "axios";
 import { Resource } from "../models/Resource.js";
 import { User } from "../models/User.js";
+import { QAInteraction } from "../models/QAInteraction.js";
+import { UserActivity } from "../models/UserActivity.js";
 import { logger } from "../config/logger.js";
-import { buildResourceContent } from "../services/resourceContent.js";
-import { syncResourceToSemanticIndex } from "../controllers/resourceController.js";
 import {
   isValidObjectId,
   normalizeString,
   parseBoundedInteger,
 } from "../utils/security.js";
-import {
-  AI_SERVICE_URL,
-  getAiServiceAxiosConfig,
-} from "../utils/aiService.js";
+import { answerQuestion } from "../services/rag.service.js";
 
 const router = express.Router();
-const AI_QA_BASE_URL = `${AI_SERVICE_URL}/api/v1/qa`;
 
-// POST /api/qa/ask - Ask a question about a resource
-router.post("/ask", validateQuestion, async (req, res) => {
+const normalizeResourceIds = (resourceId, resourceIds = []) => {
+  if (Array.isArray(resourceIds) && resourceIds.length > 0) {
+    return resourceIds.filter((id) => isValidObjectId(id)).slice(0, 10);
+  }
+
+  if (resourceId && isValidObjectId(resourceId)) {
+    return [resourceId];
+  }
+
+  return [];
+};
+
+const formatInteraction = (interaction) => ({
+  _id: interaction._id,
+  question: interaction.question,
+  answer: interaction.answer,
+  sources: interaction.sources || [],
+  resourceIds: interaction.resourceIds || [],
+  processingTime: interaction.processingTime || 0,
+  confidence: interaction.confidence || 0,
+  answerMode: interaction.answerMode || "ai",
+  rating: interaction.rating || null,
+  createdAt: interaction.createdAt,
+});
+
+const handleAnswer = async (req, res) => {
   try {
     const { question, resourceId, resourceIds } = req.body;
-    const userId = req.user.uid;
+    const userUid = req.user.uid;
     const normalizedQuestion = normalizeString(question, { maxLength: 500 });
 
-    // Verify user exists
-    const user = await User.findOne({ uid: userId });
+    const user = await User.findOne({ uid: userUid });
     if (!user) {
-      return res
-        .status(401)
-        .json({ success: false, message: "User not found" });
-    }
-
-    // Get resource IDs to search (if specific resource, use that; otherwise search all)
-    let targetResourceIds = [];
-    if (Array.isArray(resourceIds) && resourceIds.length > 0) {
-      targetResourceIds = resourceIds.filter((id) => isValidObjectId(id)).slice(0, 10);
-    } else if (resourceId) {
-      targetResourceIds = isValidObjectId(resourceId) ? [resourceId] : [];
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
     if (!normalizedQuestion) {
@@ -49,6 +60,7 @@ router.post("/ask", validateQuestion, async (req, res) => {
       });
     }
 
+    const targetResourceIds = normalizeResourceIds(resourceId, resourceIds);
     if ((resourceId || resourceIds) && targetResourceIds.length === 0) {
       return res.status(400).json({
         success: false,
@@ -56,164 +68,100 @@ router.post("/ask", validateQuestion, async (req, res) => {
       });
     }
 
-    if (targetResourceIds.length > 0) {
-      for (const id of targetResourceIds) {
-        const resource = await Resource.findById(id);
-        if (!resource) {
-          return res
-            .status(404)
-            .json({ success: false, message: "Resource not found" });
-        }
-
-        // Ensure selected resources have meaningful extracted text and a fresh index.
-        try {
-          let extractedContent = (resource.extractedContent || "").trim();
-          if (!extractedContent || extractedContent.length < 40) {
-            extractedContent = await buildResourceContent(resource);
-            if (extractedContent) {
-              resource.extractedContent = extractedContent;
-              await resource.save();
-            }
-          }
-
-          if (extractedContent) {
-            await syncResourceToSemanticIndex(resource, extractedContent);
-          }
-        } catch (indexError) {
-          logger.warn(
-            `Pre-QA reindex skipped for resource ${resource._id}: ${indexError.message}`,
-          );
-        }
+    for (const id of targetResourceIds) {
+      const resource = await Resource.findById(id);
+      if (!resource) {
+        return res.status(404).json({
+          success: false,
+          message: "Resource not found",
+        });
       }
     }
 
-    // Call AI Service RAG endpoint
-    const startTime = Date.now();
-    let ragResponse;
+    const result = await answerQuestion({
+      question: normalizedQuestion,
+      resourceIds: targetResourceIds,
+    });
 
-    try {
-      ragResponse = await axios.post(
-        `${AI_QA_BASE_URL}/answer`,
-        {
-          question: normalizedQuestion,
-          resource_ids: targetResourceIds.map((id) => id.toString()),
-        },
-        getAiServiceAxiosConfig({
-          timeout: 45000, // 45 second timeout
-        }),
-      );
-    } catch (error) {
-      logger.error("AI Service error:", error.message);
+    await UserActivity.create({
+      userId: user._id,
+      type: "qa_asked",
+      resourceId: targetResourceIds[0] || null,
+      topicName: targetResourceIds.length > 0 ? "document-qa" : "general-qa",
+      searchQuery: normalizedQuestion,
+      duration: Math.round((result.processingTime || 0) / 1000),
+      metadata: {
+        semester: user.semester,
+        department: user.department,
+        deviceType: "web",
+        userAgent: req.headers["user-agent"] || "unknown",
+      },
+    }).catch((error) => {
+      logger.warn(`Failed to track QA activity: ${error.message}`);
+    });
 
-      if (error.code === "ECONNREFUSED") {
-        return res.status(503).json({
-          success: false,
-          message: "AI Service unavailable. Please try again later.",
-        });
-      }
+    return res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    logger.error(`QA answer route failed: ${error.message}`);
+    return res.json({
+      success: true,
+      data: {
+        answer: "AI is temporarily unavailable. Please try again.",
+        sources: [],
+        confidence: 0,
+        processingTime: 0,
+        tokensUsed: 0,
+        answerMode: "fallback",
+        answerLabel: "AI Unavailable",
+        sourceCount: 0,
+      },
+    });
+  }
+};
 
-      if (error.response?.status === 429) {
-        return res.status(429).json({
-          success: false,
-          message:
-            "Rate limit exceeded. Please wait before asking another question.",
-        });
-      }
+router.post("/ask", validateQuestion, handleAnswer);
+router.post("/answer", validateQuestion, handleAnswer);
 
-      return res.status(500).json({
+router.get("/history", async (req, res) => {
+  try {
+    const user = await User.findOne({ uid: req.user.uid });
+    if (!user) {
+      return res.status(401).json({
         success: false,
-        message: "Error generating answer. Please try again.",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        message: "User not found",
       });
     }
 
-    const processingTime = Date.now() - startTime;
-
-    // Store QA interaction in database
-    try {
-      await axios.post(
-        `${AI_QA_BASE_URL}/store-interaction`,
-        {
-          userId,
-          question: normalizedQuestion,
-          answer: ragResponse.data.answer,
-          sources: ragResponse.data.sources,
-          processingTime,
-          resourceIds: targetResourceIds,
-        },
-        getAiServiceAxiosConfig(),
-      );
-    } catch (error) {
-      logger.warn("Failed to store QA interaction:", error.message);
-      // Don't fail the request if storage fails
-    }
-
-    res.json({
-      success: true,
-      data: {
-        answer: ragResponse.data.answer,
-        sources: ragResponse.data.sources || [],
-        confidence: ragResponse.data.confidence || 0,
-        processingTime,
-        tokensUsed: ragResponse.data.tokens_used || 0,
-        answerMode: ragResponse.data.answer_mode || "ai",
-        answerLabel: ragResponse.data.answer_label || "AI Answer",
-        sourceCount:
-          ragResponse.data.source_count ||
-          (ragResponse.data.sources || []).length ||
-          0,
-      },
-    });
-  } catch (error) {
-    logger.error("QA endpoint error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
-  }
-});
-
-// GET /api/qa/history - Get user's question history
-router.get("/history", async (req, res) => {
-  try {
-    const userId = req.user.uid;
     const limit = parseBoundedInteger(req.query.limit, {
       min: 1,
       max: 50,
       fallback: 10,
     });
 
-    const history = await axios.get(
-      `${AI_QA_BASE_URL}/user-history`,
-      getAiServiceAxiosConfig({
-        params: {
-          user_id: userId,
-          limit,
-        },
-      }),
-    );
+    const interactions = await QAInteraction.find({ userId: user._id })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
 
-    res.json({
+    return res.json({
       success: true,
-      data: history.data.interactions || [],
+      data: interactions.map(formatInteraction),
     });
   } catch (error) {
-    logger.error("Get history error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to retrieve history",
+    logger.error(`Failed to retrieve QA history: ${error.message}`);
+    return res.json({
+      success: true,
+      data: [],
     });
   }
 });
 
-// POST /api/qa/rate - Rate an answer
 router.post("/rate", async (req, res) => {
   try {
     const { questionId, rating } = req.body;
-    const userId = req.user.uid;
-
     if (!["helpful", "not-helpful"].includes(rating)) {
       return res.status(400).json({
         success: false,
@@ -221,42 +169,56 @@ router.post("/rate", async (req, res) => {
       });
     }
 
-    await axios.post(
-      `${AI_QA_BASE_URL}/rate-answer`,
-      {
-        question_id: questionId,
-        user_id: userId,
-        rating,
-      },
-      getAiServiceAxiosConfig(),
+    if (!isValidObjectId(questionId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid interaction ID",
+      });
+    }
+
+    const user = await User.findOne({ uid: req.user.uid });
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    await QAInteraction.findOneAndUpdate(
+      { _id: questionId, userId: user._id },
+      { $set: { rating } },
+      { new: true },
     );
 
-    res.json({
+    return res.json({
       success: true,
       message: "Rating submitted",
     });
   } catch (error) {
-    logger.error("Rate answer error:", error);
-    res.status(500).json({
+    logger.error(`Failed to submit QA rating: ${error.message}`);
+    return res.json({
       success: false,
       message: "Failed to submit rating",
     });
   }
 });
 
-// POST /api/qa/store-interaction - store interaction (non-critical)
 router.post("/store-interaction", async (req, res) => {
   try {
-    const {
-      question,
-      answer,
-      sources = [],
-      processingTime,
-      resourceIds = [],
-    } = req.body;
-    const userId = req.user.uid;
-    const normalizedQuestion = normalizeString(question, { maxLength: 500 });
-    const normalizedAnswer = normalizeString(answer, { maxLength: 10000 });
+    const user = await User.findOne({ uid: req.user.uid });
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const normalizedQuestion = normalizeString(req.body.question, {
+      maxLength: 500,
+    });
+    const normalizedAnswer = normalizeString(req.body.answer, {
+      maxLength: 12000,
+    });
 
     if (!normalizedQuestion || !normalizedAnswer) {
       return res.status(400).json({
@@ -265,25 +227,40 @@ router.post("/store-interaction", async (req, res) => {
       });
     }
 
-    await axios.post(
-      `${AI_QA_BASE_URL}/store-interaction`,
-      {
-        userId,
-        question: normalizedQuestion,
-        answer: normalizedAnswer,
-        sources,
-        processingTime: Number(processingTime) || 0,
-        resourceIds: Array.isArray(resourceIds)
-          ? resourceIds.filter((id) => isValidObjectId(id)).slice(0, 10)
-          : [],
-      },
-      getAiServiceAxiosConfig(),
-    );
+    const interaction = await QAInteraction.create({
+      userId: user._id,
+      question: normalizedQuestion,
+      answer: normalizedAnswer,
+      sources: Array.isArray(req.body.sources)
+        ? req.body.sources.slice(0, 5).map((source) => ({
+            docId: isValidObjectId(source?.docId) ? source.docId : undefined,
+            title: normalizeString(source?.title, { maxLength: 200 }),
+            snippet: normalizeString(source?.snippet, { maxLength: 1500 }),
+            score: Number(source?.score) || 0,
+            chunkIndex: Number(source?.chunkIndex) || 0,
+          }))
+        : [],
+      resourceIds: Array.isArray(req.body.resourceIds)
+        ? req.body.resourceIds.filter((id) => isValidObjectId(id)).slice(0, 10)
+        : [],
+      processingTime: Number(req.body.processingTime) || 0,
+      confidence: Number(req.body.confidence) || 0,
+      answerMode: normalizeString(req.body.answerMode, {
+        maxLength: 50,
+      }) || "ai",
+    });
 
-    return res.json({ success: true, message: "Interaction stored" });
+    return res.json({
+      success: true,
+      message: "Interaction stored",
+      data: formatInteraction(interaction),
+    });
   } catch (error) {
-    logger.warn("Store interaction proxy error:", error.message);
-    return res.json({ success: false, message: "Failed to store interaction" });
+    logger.warn(`Failed to store QA interaction: ${error.message}`);
+    return res.json({
+      success: false,
+      message: "Failed to store interaction",
+    });
   }
 });
 

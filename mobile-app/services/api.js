@@ -15,10 +15,8 @@ import {
 import { rateLimiter } from "./rateLimiter";
 
 function getApiBaseUrl() {
-  if (process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL) {
-    const configuredUrl =
-      process.env.EXPO_PUBLIC_API_BASE_URL ||
-      process.env.EXPO_PUBLIC_API_URL;
+  if (process.env.EXPO_PUBLIC_API_BASE_URL) {
+    const configuredUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
 
     if (Platform.OS === "android") {
       return configuredUrl

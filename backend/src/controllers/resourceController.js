@@ -7,16 +7,28 @@ import {
 } from "../config/database.js";
 import { buildResourceContent } from "../services/resourceContent.js";
 import {
+  extractTags,
+  summarizeText,
+} from "../services/ai.service.js";
+import {
+  removeResourceEmbeddings,
+} from "../services/resourceIndex.service.js";
+import {
   normalizeOptionalString,
   normalizeString,
   parseBoundedInteger,
   safeJsonError,
   sanitizeFilename,
 } from "../utils/security.js";
-import {
-  AI_SERVICE_URL,
-  getAiServiceFetchOptions,
-} from "../utils/aiService.js";
+
+const MIN_INDEXABLE_CONTENT_CHARS = Number.parseInt(
+  process.env.MIN_EMBEDDING_CHARS || "100",
+  10,
+);
+const SEMANTIC_RESOURCE_TYPES = new Set(["pdf", "docx", "pptx", "txt"]);
+const uploadEnrichmentEnabled =
+  (process.env.ENABLE_UPLOAD_ENRICHMENT || "false").trim().toLowerCase() ===
+  "true";
 
 const ensureGridFsFileExists = async (fileId) => {
   const filesCollection = getUploadsFilesCollection();
@@ -32,63 +44,22 @@ const ensureGridFsFileExists = async (fileId) => {
 const enrichResourceWithDocumentIntelligence = async (resource, textForAI) => {
   try {
     if (!textForAI) return;
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-    const [summaryResp, tagsResp] = await Promise.allSettled([
-      fetch(`${AI_SERVICE_URL}/document-intelligence/summarize`, {
-        ...getAiServiceFetchOptions({
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        }),
-        signal: controller.signal,
-        body: JSON.stringify({
-          text: textForAI,
-          max_length: 180,
-          min_length: 60,
-        }),
-      }),
-      fetch(`${AI_SERVICE_URL}/document-intelligence/tag`, {
-        ...getAiServiceFetchOptions({
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        }),
-        signal: controller.signal,
-        body: JSON.stringify({
-          text: textForAI,
-          top_k: 5,
-        }),
-      }),
+    const [summary, tags] = await Promise.all([
+      summarizeText(textForAI),
+      extractTags(textForAI),
     ]);
 
-    clearTimeout(timeoutId);
-
-    let summary = null;
-    let tags = [];
-
-    if (summaryResp.status === "fulfilled" && summaryResp.value.ok) {
-      const payload = await summaryResp.value.json();
-      summary = payload.summary || null;
-    }
-
-    if (tagsResp.status === "fulfilled" && tagsResp.value.ok) {
-      const payload = await tagsResp.value.json();
-      tags = Array.isArray(payload.tags)
-        ? payload.tags.map((tag) => ({
-            name: tag.name || tag.alias || "topic",
-            confidence: Number(tag.confidence) || 0,
-          }))
-        : [];
-    }
-
     if (summary || tags.length > 0) {
+      const updatePayload = {
+        tags,
+      };
+
+      if (summary) {
+        updatePayload.summary = summary;
+      }
+
       await Resource.findByIdAndUpdate(resource._id, {
-        $set: {
-          summary,
-          tags,
-          processingStatus: "indexed",
-        },
+        $set: updatePayload,
       });
       logger.info(`Document intelligence updated for resource: ${resource._id}`);
     }
@@ -99,77 +70,12 @@ const enrichResourceWithDocumentIntelligence = async (resource, textForAI) => {
   }
 };
 
-export const syncResourceToSemanticIndex = async (resource, indexableContent = "") => {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-    const content =
-      indexableContent ||
-      resource.extractedContent ||
-      `${resource.title} ${resource.description || ""}`.trim();
-
-    const payload = {
-      resource_id: resource._id.toString(),
-      title: resource.title,
-      description: resource.description || "",
-      content,
-      department: resource.department || "",
-      subject: resource.subject || "",
-      category: resource.category || "",
-      semester: resource.semester ?? null,
-    };
-
-    const response = await fetch(`${AI_SERVICE_URL}/api/v1/search/index`, {
-      ...getAiServiceFetchOptions({
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      }),
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      logger.warn(
-        `AI indexing failed for resource ${resource._id}: ${response.status} ${errorBody}`,
-      );
-      return;
-    }
-
-    logger.info(`AI index synced for resource: ${resource._id}`);
-  } catch (error) {
-    logger.warn(`AI indexing skipped for resource ${resource._id}: ${error.message}`);
-  }
-};
-
 const removeResourceFromSemanticIndex = async (resourceId) => {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-    const response = await fetch(
-      `${AI_SERVICE_URL}/api/v1/search/index/${resourceId}`,
-      getAiServiceFetchOptions({
-        method: "DELETE",
-        signal: controller.signal,
-      }),
-    );
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      logger.warn(
-        `AI de-index failed for resource ${resourceId}: ${response.status} ${errorBody}`,
-      );
-      return;
-    }
-
-    logger.info(`AI index removed for resource: ${resourceId}`);
+    await removeResourceEmbeddings(resourceId);
+    logger.info(`Resource index removed for resource: ${resourceId}`);
   } catch (error) {
-    logger.warn(`AI de-index skipped for resource ${resourceId}: ${error.message}`);
+    logger.warn(`Resource de-index skipped for resource ${resourceId}: ${error.message}`);
   }
 };
 
@@ -298,6 +204,18 @@ export const uploadResource = async (req, res) => {
       req.file.buffer,
     );
 
+    logger.info(
+      `Upload extraction for ${safeFileName}: extracted text length=${extractedContent.length}`,
+    );
+
+    const semanticIndexEligible =
+      SEMANTIC_RESOURCE_TYPES.has(fileType) &&
+      extractedContent.length >= MIN_INDEXABLE_CONTENT_CHARS;
+    const processingStatus = semanticIndexEligible ? "pending_embedding" : "pending";
+    const processingError = semanticIndexEligible
+      ? null
+      : `Semantic indexing skipped until extracted text reaches ${MIN_INDEXABLE_CONTENT_CHARS} characters`;
+
     // Create resource with GridFS file information
     const resource = await Resource.create({
       title: normalizedTitle,
@@ -315,13 +233,14 @@ export const uploadResource = async (req, res) => {
       fileSize: req.file.size,
       extractedContent,
       isApproved: true, // Auto-approve uploads
+      semanticIndexEligible,
+      processingStatus,
+      processingError,
     });
 
-    // Fire-and-forget enrichment to keep uploads responsive.
-    void enrichResourceWithDocumentIntelligence(resource, extractedContent);
-
-    // Fire-and-forget AI indexing so uploads stay fast even if AI service is down.
-    void syncResourceToSemanticIndex(resource, extractedContent);
+    if (uploadEnrichmentEnabled && semanticIndexEligible) {
+      void enrichResourceWithDocumentIntelligence(resource, extractedContent);
+    }
 
     res.status(201).json({
       code: "RESOURCE_CREATED",
@@ -495,38 +414,24 @@ export const generateResourceSummary = async (req, res) => {
       });
     }
 
-    const response = await fetch(`${AI_SERVICE_URL}/document-intelligence/summarize`, {
-      ...getAiServiceFetchOptions({
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      }),
-      body: JSON.stringify({
-        text: extractedContent,
-        max_length: 180,
-        min_length: 60,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      return res.status(502).json({
+    const summary = await summarizeText(extractedContent);
+    if (!summary) {
+      return res.status(503).json({
         code: "SUMMARY_FAILED",
-        message: `Failed to generate summary${errorBody ? `: ${errorBody}` : ""}`,
+        message: "AI summary is temporarily unavailable. Please try again.",
       });
     }
 
-    const payload = await response.json();
-    resource.summary = payload.summary || resource.summary;
+    resource.summary = summary || resource.summary;
     resource.extractedContent = extractedContent;
-    resource.processingStatus = "indexed";
     await resource.save();
 
     return res.json({
       code: "SUCCESS",
       data: {
         summary: resource.summary,
-        keyPoints: payload.keyPoints || [],
-        processingTime: payload.processingTime || 0,
+        keyPoints: [],
+        processingTime: 0,
       },
     });
   } catch (error) {
@@ -570,7 +475,6 @@ export const updateResourceTags = async (req, res) => {
       {
         $set: {
           tags: inputTags,
-          processingStatus: "indexed",
         },
       },
       { new: true },

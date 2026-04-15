@@ -47,6 +47,25 @@ const SEMESTERS = Array.from({ length: 8 }, (_, index) => ({
   label: `Semester ${index + 1}`,
 }));
 
+const getProcessingStatusMeta = (status) => {
+  switch (status) {
+    case "indexed":
+      return { label: "Indexed", backgroundColor: "#DCFCE7", color: "#166534" };
+    case "processing":
+      return { label: "Processing", backgroundColor: "#FEF3C7", color: "#92400E" };
+    case "pending_embedding":
+      return {
+        label: "Retrying Embedding",
+        backgroundColor: "#FFEDD5",
+        color: "#9A3412",
+      };
+    case "failed":
+      return { label: "Index Failed", backgroundColor: "#FEE2E2", color: "#991B1B" };
+    default:
+      return { label: "Pending", backgroundColor: "#E5E7EB", color: "#374151" };
+  }
+};
+
 const ResourcesScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [resources, setResources] = useState([]);
@@ -202,46 +221,60 @@ const ResourcesScreen = ({ navigation }) => {
     }
   };
 
-  const renderResourceItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.resourceCard}
-      onPress={() => handleResourcePress(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.cardHeader}>
-        <MaterialCommunityIcons name="file-document" size={20} color="#007AFF" />
-        <Text style={styles.category}>{item.category}</Text>
-      </View>
+  const renderResourceItem = ({ item }) => {
+    const statusMeta = getProcessingStatusMeta(item.processingStatus);
 
-      <Text style={styles.resourceTitle} numberOfLines={2}>
-        {item.title}
-      </Text>
-      <Text style={styles.resourceSubject}>
-        {item.subject || item.metadata?.subject || "General"}
-      </Text>
-
-      {item.tags && item.tags.length > 0 && (
-        <View style={styles.tagsContainer}>
-          {item.tags.slice(0, 2).map((tag, idx) => (
-            <Text key={idx} style={styles.tag}>
-              {typeof tag === "string" ? tag : tag.name}
+    return (
+      <TouchableOpacity
+        style={styles.resourceCard}
+        onPress={() => handleResourcePress(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.cardHeader}>
+          <MaterialCommunityIcons name="file-document" size={20} color="#007AFF" />
+          <Text style={styles.category}>{item.category}</Text>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: statusMeta.backgroundColor },
+            ]}
+          >
+            <Text style={[styles.statusText, { color: statusMeta.color }]}>
+              {statusMeta.label}
             </Text>
-          ))}
+          </View>
         </View>
-      )}
 
-      <View style={styles.resourceFooter}>
-        <View style={styles.stat}>
-          <MaterialCommunityIcons name="download" size={14} color="#666" />
-          <Text style={styles.statText}>{item.downloads || 0}</Text>
+        <Text style={styles.resourceTitle} numberOfLines={2}>
+          {item.title}
+        </Text>
+        <Text style={styles.resourceSubject}>
+          {item.subject || item.metadata?.subject || "General"}
+        </Text>
+
+        {item.tags && item.tags.length > 0 && (
+          <View style={styles.tagsContainer}>
+            {item.tags.slice(0, 2).map((tag, idx) => (
+              <Text key={idx} style={styles.tag}>
+                {typeof tag === "string" ? tag : tag.name}
+              </Text>
+            ))}
+          </View>
+        )}
+
+        <View style={styles.resourceFooter}>
+          <View style={styles.stat}>
+            <MaterialCommunityIcons name="download" size={14} color="#666" />
+            <Text style={styles.statText}>{item.downloads || 0}</Text>
+          </View>
+          <View style={styles.stat}>
+            <MaterialCommunityIcons name="heart" size={14} color="#FF6B6B" />
+            <Text style={styles.statText}>{item.likes || 0}</Text>
+          </View>
         </View>
-        <View style={styles.stat}>
-          <MaterialCommunityIcons name="heart" size={14} color="#FF6B6B" />
-          <Text style={styles.statText}>{item.likes || 0}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -752,6 +785,16 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#007AFF",
     textTransform: "capitalize",
+  },
+  statusBadge: {
+    marginLeft: "auto",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: "700",
   },
   resourceTitle: {
     fontSize: 15,

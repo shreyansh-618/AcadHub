@@ -16,6 +16,25 @@ import * as WebBrowser from "expo-web-browser";
 import { resourceService, analyticsService } from "../../services/api";
 import { useAuthStore } from "../../store";
 
+const getProcessingStatusMeta = (status) => {
+  switch (status) {
+    case "indexed":
+      return { label: "Indexed", backgroundColor: "#DCFCE7", color: "#166534" };
+    case "processing":
+      return { label: "Processing", backgroundColor: "#FEF3C7", color: "#92400E" };
+    case "pending_embedding":
+      return {
+        label: "Retrying Embedding",
+        backgroundColor: "#FFEDD5",
+        color: "#9A3412",
+      };
+    case "failed":
+      return { label: "Index Failed", backgroundColor: "#FEE2E2", color: "#991B1B" };
+    default:
+      return { label: "Pending", backgroundColor: "#E5E7EB", color: "#374151" };
+  }
+};
+
 const ResourceDetailScreen = ({ route, navigation }) => {
   const { resource: initialResource } = route.params;
   const insets = useSafeAreaInsets();
@@ -182,6 +201,7 @@ const ResourceDetailScreen = ({ route, navigation }) => {
     (String(resource.uploadedBy?._id || resource.uploadedBy) ===
       String(user?._id || user?.id) ||
       user?.role === "admin");
+  const processingStatusMeta = getProcessingStatusMeta(resource?.processingStatus);
 
   if (loading) {
     return (
@@ -206,6 +226,17 @@ const ResourceDetailScreen = ({ route, navigation }) => {
 
       <View style={[styles.badge, { backgroundColor: "#007AFF20" }]}>
         <Text style={styles.badgeText}>{resource.category}</Text>
+      </View>
+
+      <View
+        style={[
+          styles.processingBadge,
+          { backgroundColor: processingStatusMeta.backgroundColor },
+        ]}
+      >
+        <Text style={[styles.processingBadgeText, { color: processingStatusMeta.color }]}>
+          {processingStatusMeta.label}
+        </Text>
       </View>
 
       <Text style={styles.title}>{resource.title}</Text>
@@ -389,11 +420,22 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginBottom: 12,
   },
+  processingBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginBottom: 12,
+  },
   badgeText: {
     fontSize: 12,
     fontWeight: "600",
     color: "#007AFF",
     textTransform: "capitalize",
+  },
+  processingBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   title: {
     fontSize: 24,

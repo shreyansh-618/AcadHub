@@ -6,6 +6,29 @@ import UploadDocumentModal from '@/components/UploadDocumentModal';
 import { apiClient } from '@/services/api';
 import { API_ROOT } from '@/services/urlConfig';
 
+const STATUS_STYLES = {
+  indexed: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  processing: 'border-amber-200 bg-amber-50 text-amber-700',
+  pending_embedding: 'border-orange-200 bg-orange-50 text-orange-700',
+  failed: 'border-rose-200 bg-rose-50 text-rose-700',
+  pending: 'border-slate-200 bg-slate-100 text-slate-700',
+};
+
+const getProcessingStatusMeta = (status) => {
+  switch (status) {
+    case 'indexed':
+      return { label: 'Indexed', className: STATUS_STYLES.indexed };
+    case 'processing':
+      return { label: 'Processing', className: STATUS_STYLES.processing };
+    case 'pending_embedding':
+      return { label: 'Retrying Embedding', className: STATUS_STYLES.pending_embedding };
+    case 'failed':
+      return { label: 'Index Failed', className: STATUS_STYLES.failed };
+    default:
+      return { label: 'Pending', className: STATUS_STYLES.pending };
+  }
+};
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -282,12 +305,22 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {documents.map((doc) => (
-                <div
-                  key={doc._id}
-                  className="bg-slate-50 border border-slate-200 p-6 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
-                >
+              {documents.map((doc) => {
+                const statusMeta = getProcessingStatusMeta(doc.processingStatus);
+
+                return (
+                  <div
+                    key={doc._id}
+                    className="bg-slate-50 border border-slate-200 p-6 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                  >
                   <div className="mb-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <span
+                        className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${statusMeta.className}`}
+                      >
+                        {statusMeta.label}
+                      </span>
+                    </div>
                     <h3 className="text-slate-900 font-semibold text-lg mb-2 line-clamp-2">
                       {doc.title}
                     </h3>
@@ -319,8 +352,9 @@ export default function DashboardPage() {
                   >
                     Download
                   </a>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { PDFParse } from "pdf-parse";
 import { getGridFS } from "../config/database.js";
 import { logger } from "../config/logger.js";
 
@@ -53,6 +54,12 @@ const extractPptxText = async (buffer) => {
   return normalizeText(slides.filter(Boolean).join("\n\n"));
 };
 
+const extractPdfText = async (buffer) => {
+  const parser = new PDFParse({ data: buffer });
+  const result = await parser.getText();
+  return normalizeText(result?.text || "");
+};
+
 export const extractTextFromBuffer = async (
   buffer,
   filename = "",
@@ -75,6 +82,10 @@ export const extractTextFromBuffer = async (
 
     if (extension === "pptx") {
       return (await extractPptxText(buffer)) || normalizeText(fallback);
+    }
+
+    if (extension === "pdf") {
+      return (await extractPdfText(buffer)) || normalizeText(fallback);
     }
   } catch (error) {
     logger.warn(`Text extraction fallback used for ${filename}: ${error.message}`);

@@ -2,6 +2,15 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+const rawApiBaseUrl =
+  process.env.VITE_API_BASE_URL ||
+  'http://localhost:3000/api/v1'
+
+const normalizedApiBaseUrl = rawApiBaseUrl.startsWith('http://') ||
+  rawApiBaseUrl.startsWith('https://')
+  ? rawApiBaseUrl
+  : `http://${rawApiBaseUrl}`
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -17,9 +26,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target:
-          process.env.VITE_API_BASE_URL ||
-          'https://example.invalid/api/v1',
+        target: normalizedApiBaseUrl.replace(/\/api\/v1\/?$/, ''),
         changeOrigin: true,
       },
     },

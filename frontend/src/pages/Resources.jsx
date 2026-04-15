@@ -4,6 +4,29 @@ import toast from 'react-hot-toast';
 import UploadDocumentModal from '@/components/UploadDocumentModal';
 import { API_ROOT } from '@/services/urlConfig';
 
+const STATUS_STYLES = {
+  indexed: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  processing: 'border-amber-200 bg-amber-50 text-amber-700',
+  pending_embedding: 'border-orange-200 bg-orange-50 text-orange-700',
+  failed: 'border-rose-200 bg-rose-50 text-rose-700',
+  pending: 'border-slate-200 bg-slate-100 text-slate-700',
+};
+
+const getProcessingStatusMeta = (status) => {
+  switch (status) {
+    case 'indexed':
+      return { label: 'Indexed', className: STATUS_STYLES.indexed };
+    case 'processing':
+      return { label: 'Processing', className: STATUS_STYLES.processing };
+    case 'pending_embedding':
+      return { label: 'Retrying Embedding', className: STATUS_STYLES.pending_embedding };
+    case 'failed':
+      return { label: 'Index Failed', className: STATUS_STYLES.failed };
+    default:
+      return { label: 'Pending', className: STATUS_STYLES.pending };
+  }
+};
+
 export default function Resources() {
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -165,20 +188,28 @@ export default function Resources() {
             <div className="text-slate-400">Loading resources...</div>
           </div>
         ) : resources.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-              {resources.map((resource) => (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+            {resources.map((resource) => {
+              const statusMeta = getProcessingStatusMeta(resource.processingStatus);
+
+              return (
                 <div
                   key={resource._id}
                   className="group overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/75 shadow-[0_18px_50px_rgba(91,101,118,0.08)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_24px_70px_rgba(91,101,118,0.14)]"
                 >
-                  {/* Header */}
                   <div className="bg-[linear-gradient(135deg,rgba(208,214,222,0.95),rgba(236,239,242,0.92))] p-4">
-                    <span className="rounded-full border border-slate-300/80 bg-white/75 px-3 py-1 text-xs font-semibold text-slate-700">
-                      {resource.category}
-                    </span>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="rounded-full border border-slate-300/80 bg-white/75 px-3 py-1 text-xs font-semibold text-slate-700">
+                        {resource.category}
+                      </span>
+                      <span
+                        className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${statusMeta.className}`}
+                      >
+                        {statusMeta.label}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Content */}
                   <div className="p-4">
                     <h3 className="mb-2 line-clamp-2 text-lg font-bold text-slate-900 transition-colors group-hover:text-slate-700">
                       {resource.title}
@@ -187,7 +218,6 @@ export default function Resources() {
                       {resource.description || 'No description provided'}
                     </p>
 
-                    {/* Metadata */}
                     <div className="mb-4 space-y-2 border-t border-slate-200 pt-3 text-xs text-slate-500">
                       <div className="flex justify-between">
                         <span>Subject:</span>
@@ -207,27 +237,27 @@ export default function Resources() {
                       </div>
                     </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    <a
-                      href={`${API_ROOT}/resources/${resource._id}/download`}
-                      download
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-primary text-sm py-2 flex-1 text-center"
-                    >
-                      Download
-                    </a>
-                    <Link
-                      to={`/resources/${resource._id}`}
-                      className="btn-secondary text-sm py-2 flex-1 text-center"
-                    >
-                      View
-                    </Link>
+                    <div className="flex gap-2">
+                      <a
+                        href={`${API_ROOT}/resources/${resource._id}/download`}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-primary text-sm py-2 flex-1 text-center"
+                      >
+                        Download
+                      </a>
+                      <Link
+                        to={`/resources/${resource._id}`}
+                        className="btn-secondary text-sm py-2 flex-1 text-center"
+                      >
+                        View
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-12">

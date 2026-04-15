@@ -47,8 +47,7 @@ export default {
       eas: {
         projectId: "acadhub-mobile-project",
       },
-      apiBaseUrl:
-        process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL,
+      apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
       firebaseApiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
       firebaseAuthDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
       firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,

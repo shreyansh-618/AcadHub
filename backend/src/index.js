@@ -16,6 +16,7 @@ import searchRoutes from "./routes/searchRoutes.js";
 import qaRoutes from "./routes/qaRoutes.js";
 import { analyticsRouter } from "./routes/analyticsRoutes.js";
 import { recommendationsRouter } from "./routes/recommendationsRoutes.js";
+import { reindexPendingResources } from "./services/resourceIndex.service.js";
 
 dotenv.config();
 
@@ -23,10 +24,23 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === "production";
 const trustProxy = process.env.TRUST_PROXY ?? (isProduction ? "1" : "false");
+const embeddingRetryJobEnabled =
+  (process.env.EMBEDDING_RETRY_JOB_ENABLED ?? "true").trim().toLowerCase() !==
+  "false";
+const embeddingRetryIntervalMs = Number.parseInt(
+  process.env.EMBEDDING_RETRY_INTERVAL_MS || "60000",
+  10,
+);
+const embeddingRetryBatchSize = Number.parseInt(
+  process.env.EMBEDDING_RETRY_BATCH_SIZE || "10",
+  10,
+);
 const configuredOrigins = (process.env.CORS_ORIGIN || "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+let embeddingRetryTimer = null;
+let embeddingRetryJobRunning = false;
 
 if (isProduction && configuredOrigins.length === 0) {
   throw new Error("CORS_ORIGIN must be set to your frontend domain(s) in production");
@@ -227,9 +241,48 @@ const startServer = async () => {
     // Connect to MongoDB
     await connectDB();
 
+    if (embeddingRetryJobEnabled) {
+      embeddingRetryTimer = setInterval(async () => {
+        if (embeddingRetryJobRunning) {
+          return;
+        }
+
+        embeddingRetryJobRunning = true;
+        try {
+          const result = await reindexPendingResources({
+            limit: embeddingRetryBatchSize,
+          });
+
+          if (result.total > 0) {
+            logger.info(
+              {
+                total: result.total,
+                indexed: result.indexed,
+                deferred: result.deferred,
+                failed: result.failed,
+              },
+              "Pending embedding retry run completed",
+            );
+          }
+        } catch (error) {
+          logger.warn(`Pending embedding retry job failed: ${error.message}`);
+        } finally {
+          embeddingRetryJobRunning = false;
+        }
+      }, Math.max(embeddingRetryIntervalMs, 5000));
+
+      logger.info(
+        {
+          intervalMs: Math.max(embeddingRetryIntervalMs, 5000),
+          batchSize: embeddingRetryBatchSize,
+        },
+        "Pending embedding retry job enabled",
+      );
+    }
+
     // Start server
     app.listen(PORT, () => {
-      logger.info(`Server started on http://localhost:${PORT}`);
+      logger.info({ port: PORT }, "Server started");
     });
   } catch (error) {
     logger.error("Failed to start server:", error);
@@ -240,11 +293,17 @@ const startServer = async () => {
 // Handle graceful shutdown
 process.on("SIGTERM", () => {
   logger.info("SIGTERM signal received: closing HTTP server");
+  if (embeddingRetryTimer) {
+    clearInterval(embeddingRetryTimer);
+  }
   process.exit(0);
 });
 
 process.on("SIGINT", () => {
   logger.info("SIGINT signal received: closing HTTP server");
+  if (embeddingRetryTimer) {
+    clearInterval(embeddingRetryTimer);
+  }
   process.exit(0);
 });
 
