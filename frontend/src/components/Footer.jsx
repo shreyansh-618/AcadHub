@@ -128,7 +128,7 @@ export default function Footer() {
         <div className="border-t border-slate-200/70 pt-8">
           <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
             <p className="text-sm text-slate-600">
-              Â© {currentYear} AcadHub. All rights reserved.
+              © {currentYear} AcadHub. All rights reserved.
             </p>
             <div className="flex gap-6">
               <a
@@ -166,3 +166,4 @@ export default function Footer() {
     </footer>
   );
 }
+

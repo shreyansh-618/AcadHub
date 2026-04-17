@@ -4,6 +4,7 @@ import {
   initializeFirebaseAuth,
   getFirebaseAuthInstance,
 } from "../services/firebase";
+import { authService } from "../services/api";
 
 export const useAuthStore = create((set, get) => ({
   user: null,
@@ -29,17 +30,28 @@ export const useAuthStore = create((set, get) => ({
       const freshToken = await firebaseUser.getIdToken();
       await AsyncStorage.setItem("authToken", freshToken);
 
-      if (userStr) {
-        set({ token: freshToken, user: JSON.parse(userStr) });
-      } else {
-        const fallbackUser = {
+      let resolvedUser = null;
+
+      try {
+        resolvedUser = await authService.getProfile();
+      } catch (error) {
+        console.warn("Falling back to cached mobile user profile:", error);
+      }
+
+      if (!resolvedUser && userStr) {
+        resolvedUser = JSON.parse(userStr);
+      }
+
+      if (!resolvedUser) {
+        resolvedUser = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           name: firebaseUser.displayName || "User",
         };
-        await AsyncStorage.setItem("user", JSON.stringify(fallbackUser));
-        set({ token: freshToken, user: fallbackUser });
       }
+
+      await AsyncStorage.setItem("user", JSON.stringify(resolvedUser));
+      set({ token: freshToken, user: resolvedUser });
     } catch (error) {
       console.error("Error initializing auth:", error);
       await AsyncStorage.removeItem("authToken");

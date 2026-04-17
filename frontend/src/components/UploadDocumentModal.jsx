@@ -158,7 +158,7 @@ export default function UploadDocumentModal({ onClose, onSuccess }) {
             onClick={onClose}
             className="text-slate-400 hover:text-white text-2xl"
           >
-            Ã—
+            ×
           </button>
         </div>
 
@@ -311,3 +311,4 @@ export default function UploadDocumentModal({ onClose, onSuccess }) {
     </div>
   );
 }
+

@@ -29,15 +29,11 @@ qaClient.interceptors.request.use((config) => {
  * @returns {Promise<Object>} Answer with sources and metadata
  */
 export const askQuestion = async (question, resourceIds = []) => {
-  try {
-    const response = await qaClient.post("/qa/ask", {
-      question,
-      resourceIds,
-    });
-    return response.data?.data || response.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await qaClient.post("/qa/ask", {
+    question,
+    resourceIds,
+  });
+  return response.data?.data || response.data;
 };
 
 /**
@@ -46,14 +42,10 @@ export const askQuestion = async (question, resourceIds = []) => {
  * @returns {Promise<Array>} Array of past QA interactions
  */
 export const getUserQAHistory = async (limit = 10) => {
-  try {
-    const response = await qaClient.get("/qa/history", {
-      params: { limit: Math.min(limit, 50) },
-    });
-    return response.data?.data || response.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await qaClient.get("/qa/history", {
+    params: { limit: Math.min(limit, 50) },
+  });
+  return response.data?.data || response.data;
 };
 
 /**
@@ -63,15 +55,11 @@ export const getUserQAHistory = async (limit = 10) => {
  * @returns {Promise<Object>} Success response
  */
 export const rateAnswer = async (interactionId, rating) => {
-  try {
-    const response = await qaClient.post("/qa/rate", {
-      questionId: interactionId,
-      rating,
-    });
-    return response.data?.data || response.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await qaClient.post("/qa/rate", {
+    questionId: interactionId,
+    rating,
+  });
+  return response.data?.data || response.data;
 };
 
 /**

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { authService } from "@/services/auth";
 
@@ -12,8 +12,6 @@ export default function SignupPage() {
   const [department, setDepartment] = useState("Computer Science");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const navigate = useNavigate();
-
   const handleSignup = async (e) => {
     e.preventDefault();
     if (loading) return; // Prevent double submission
@@ -50,7 +48,7 @@ export default function SignupPage() {
         department,
       );
       if (result?.data?.user) {
-        toast.success("Account created successfully! ðŸŽ‰");
+        toast.success("Account created successfully!");
         // Navigation happens automatically via App.jsx auth state change
       }
     } catch (error) {
@@ -65,7 +63,7 @@ export default function SignupPage() {
     try {
       const result = await authService.signupWithGoogle(role, department);
       if (result?.data?.user) {
-        toast.success("Account created with Google! ðŸŽ‰");
+        toast.success("Account created with Google!");
         // Navigation happens automatically via App.jsx auth state change
       }
     } catch (error) {
@@ -171,7 +169,7 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="input-field text-sm"
-                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                placeholder="••••••••"
                 required
               />
               <p className="text-xs text-slate-500 mt-1">
@@ -189,7 +187,7 @@ export default function SignupPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="input-field text-sm"
-                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                placeholder="••••••••"
                 required
               />
             </div>
@@ -288,3 +286,4 @@ export default function SignupPage() {
     </div>
   );
 }
+

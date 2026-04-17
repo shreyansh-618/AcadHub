@@ -117,7 +117,6 @@ const ResourcesScreen = ({ navigation }) => {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const file = result.assets[0];
-        console.log("Selected file:", file);
         setSelectedFile(file);
         Alert.alert("Success", `Selected: ${file.name}`);
       }

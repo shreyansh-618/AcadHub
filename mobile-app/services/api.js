@@ -8,10 +8,7 @@ import {
   signOut,
   fetchSignInMethodsForEmail,
 } from "@firebase/auth";
-import {
-  initializeFirebaseAuth,
-  getFirebaseAuthInstance,
-} from "./firebase";
+import { initializeFirebaseAuth, getFirebaseAuthInstance } from "./firebase";
 import { rateLimiter } from "./rateLimiter";
 
 function getApiBaseUrl() {
@@ -55,7 +52,8 @@ const WEB_BASE_URL =
   process.env.EXPO_PUBLIC_WEB_URL ||
   API_BASE_URL.replace(/\/api\/v1\/?$/, "").replace(":3000", ":5173");
 
-const extractPayload = (responseData) => responseData?.data || responseData || {};
+const extractPayload = (responseData) =>
+  responseData?.data || responseData || {};
 
 const normalizeError = (error, fallbackMessage) => {
   const message =
@@ -184,7 +182,11 @@ export const authService = {
 
         const existingMethods = await fetchSignInMethodsForEmail(auth, email);
         if (existingMethods.includes("password")) {
-          const signedIn = await signInWithEmailAndPassword(auth, email, password);
+          const signedIn = await signInWithEmailAndPassword(
+            auth,
+            email,
+            password,
+          );
           firebaseUser = signedIn.user;
         } else {
           throw new Error(
@@ -341,7 +343,9 @@ export const resourceService = {
 
   async generateSummary(resourceId) {
     try {
-      const response = await apiClient.post(`/resources/${resourceId}/generate-summary`);
+      const response = await apiClient.post(
+        `/resources/${resourceId}/generate-summary`,
+      );
       return extractPayload(response.data);
     } catch (error) {
       console.error("Generate summary error:", error);
@@ -431,7 +435,10 @@ export const qaService = {
 
   async storeInteraction(interaction) {
     try {
-      const response = await apiClient.post("/qa/store-interaction", interaction);
+      const response = await apiClient.post(
+        "/qa/store-interaction",
+        interaction,
+      );
       return extractPayload(response.data);
     } catch (error) {
       console.warn("Failed to store QA interaction:", error);

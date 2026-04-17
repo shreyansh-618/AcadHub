@@ -311,7 +311,7 @@ export default function ResourceDetailPage() {
           to="/resources"
           className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900"
         >
-          <span aria-hidden="true">←</span>
+          <span aria-hidden="true">?</span>
           Back to Resources
         </Link>
 
@@ -691,3 +691,4 @@ export default function ResourceDetailPage() {
     </div>
   );
 }
+

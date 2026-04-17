@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { authService } from "@/services/auth";
 
@@ -7,8 +7,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
-
   const handleLogin = async (e) => {
     e.preventDefault();
     if (loading) return; // Prevent double submission
@@ -89,7 +87,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="input-field text-sm"
-                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                placeholder="••••••••"
               />
             </div>
 
@@ -177,3 +175,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

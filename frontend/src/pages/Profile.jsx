@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { authService } from "@/services/auth";
+import { API_ROOT } from "@/services/urlConfig";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export default function ProfilePage() {
 
         const token = await firebaseUser.getIdToken();
 
-        const profileRes = await fetch("/api/v1/users/profile", {
+        const profileRes = await fetch(`${API_ROOT}/users/profile`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -50,7 +51,7 @@ export default function ProfilePage() {
           });
         }
 
-        const uploadedRes = await fetch("/api/v1/resources/my-uploads", {
+        const uploadedRes = await fetch(`${API_ROOT}/resources/my-uploads`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -60,7 +61,7 @@ export default function ProfilePage() {
           setUploadedDocs(uploadedData.data?.resources || []);
         }
 
-        const likedRes = await fetch("/api/v1/resources/my-likes", {
+        const likedRes = await fetch(`${API_ROOT}/resources/my-likes`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -98,7 +99,7 @@ export default function ProfilePage() {
 
       const token = await firebaseUser.getIdToken();
 
-      const res = await fetch("/api/v1/users/profile", {
+      const res = await fetch(`${API_ROOT}/users/profile`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -149,7 +150,7 @@ export default function ProfilePage() {
       }
 
       const token = await firebaseUser.getIdToken();
-      const response = await fetch(`/api/v1/resources/${docId}`, {
+      const response = await fetch(`${API_ROOT}/resources/${docId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -228,7 +229,7 @@ export default function ProfilePage() {
                 </h1>
                 <p className="text-slate-500">{user?.email}</p>
                 <p className="text-slate-500 capitalize">
-                  {user?.role} â€¢ {user?.department}
+                  {user?.role} • {user?.department}
                 </p>
                 {user?.bio && <p className="mt-2 text-slate-600">{user.bio}</p>}
               </div>
@@ -394,3 +395,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+

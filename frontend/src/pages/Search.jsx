@@ -273,7 +273,7 @@ export default function SearchPage() {
                           : ""}
                       </span>
                       <span className="font-semibold text-slate-700 transition-colors group-hover:text-slate-900">
-                        View →
+                        View
                       </span>
                     </div>
                   </Link>
@@ -281,7 +281,7 @@ export default function SearchPage() {
               </div>
             ) : !loading ? (
               <div className="glass-lg py-16 text-center">
-                <div className="mb-4 text-6xl">⌕</div>
+                <div className="mb-4 text-6xl">Search</div>
                 <h3 className="mb-2 text-2xl font-bold text-slate-900">
                   No Results Found
                 </h3>
@@ -310,7 +310,7 @@ export default function SearchPage() {
 
         {!searchQuery && results.length === 0 && (
           <div className="glass-lg py-20 text-center">
-            <div className="mb-6 text-7xl">⌕</div>
+            <div className="mb-6 text-7xl">Search</div>
             <h2 className="mb-3 text-3xl font-bold gradient-text">
               Ready to Search?
             </h2>

@@ -23,7 +23,7 @@ export default function HomePage() {
         <div className="container-max">
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-block mb-6 px-4 py-2 rounded-full bg-primary-100 text-primary-700 font-semibold text-sm">
-              ✨ Welcome to the Future of Academic Learning
+              Welcome to the Future of Academic Learning
             </div>
 
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
@@ -226,3 +226,4 @@ export default function HomePage() {
     </div>
   );
 }
+

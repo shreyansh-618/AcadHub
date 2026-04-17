@@ -6,7 +6,7 @@ export const searchService = {
    */
   async semanticSearch(query) {
     const response = await apiClient.post(
-      '/api/v1/search/semantic',
+      '/search/semantic',
       query
     );
     return response.data;
@@ -17,7 +17,7 @@ export const searchService = {
    */
   async getSearchSuggestions(query) {
     const response = await apiClient.get(
-      '/api/v1/search/suggestions',
+      '/search/suggestions',
       { params: { q: query } }
     );
     return response.data.suggestions;
@@ -28,7 +28,7 @@ export const searchService = {
    */
   async getTrendingSearches() {
     const response = await apiClient.get(
-      '/api/v1/search/trending'
+      '/search/trending'
     );
     return response.data.searches;
   },

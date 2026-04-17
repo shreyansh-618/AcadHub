@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import QAInterface from "../components/QAInterface";
 import { useAuthStore } from "../store/useAuthStore";
+import { API_ROOT } from "@/services/urlConfig";
 import "./AcademicAssistant.css";
 
 const AcademicAssistant = () => {
@@ -13,18 +14,18 @@ const AcademicAssistant = () => {
   const [activeTab, setActiveTab] = useState("qa");
 
   // Load resource if resourceId is provided
-  useEffect(() => {
-    if (resourceId) {
-      fetchResource();
+  const fetchResource = useCallback(async () => {
+    if (!resourceId) {
+      setResource(null);
+      setLoading(false);
+      return;
     }
-  }, [resourceId]);
 
-  const fetchResource = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/v1/resources/${resourceId}`, {
+      const response = await fetch(`${API_ROOT}/resources/${resourceId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -42,7 +43,11 @@ const AcademicAssistant = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [resourceId, token]);
+
+  useEffect(() => {
+    void fetchResource();
+  }, [fetchResource]);
 
   return (
     <div className="academic-assistant">

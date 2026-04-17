@@ -11,7 +11,6 @@ import {
   Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuthStore } from "../../store";
 import { authService } from "../../services/api";
@@ -21,7 +20,6 @@ type Props = NativeStackScreenProps<any, "login">;
 export default function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login, setError } = useAuthStore();
 
@@ -67,7 +65,9 @@ export default function LoginScreen({ navigation }: Props) {
         >
           {/* Logo Section */}
           <View style={{ alignItems: "center", marginBottom: 40 }}>
-            <Text style={{ fontSize: 32, fontWeight: "bold", color: "#1a73e8" }}>
+            <Text
+              style={{ fontSize: 32, fontWeight: "bold", color: "#1a73e8" }}
+            >
               AcadHub
             </Text>
             <Text
@@ -124,45 +124,23 @@ export default function LoginScreen({ navigation }: Props) {
             >
               Password
             </Text>
-            <View style={{ position: "relative" }}>
-              <TextInput
-                style={{
-                  borderWidth: 1,
-                  borderColor: "#dadce0",
-                  borderRadius: 8,
-                  paddingHorizontal: 16,
-                  paddingVertical: 12,
-                  paddingRight: 48,
-                  fontSize: 16,
-                  backgroundColor: "#ffffff",
-                }}
-                placeholder="Enter your password"
-                placeholderTextColor="#9aa0a6"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                editable={!loading}
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword((prev) => !prev)}
-                style={{
-                  position: "absolute",
-                  right: 12,
-                  top: 0,
-                  bottom: 0,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  padding: 4,
-                }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons
-                  name={showPassword ? "eye-off-outline" : "eye-outline"}
-                  size={22}
-                  color="#5f6368"
-                />
-              </TouchableOpacity>
-            </View>
+            <TextInput
+              style={{
+                borderWidth: 1,
+                borderColor: "#dadce0",
+                borderRadius: 8,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                fontSize: 16,
+                backgroundColor: "#ffffff",
+              }}
+              placeholder="Enter your password"
+              placeholderTextColor="#9aa0a6"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              editable={!loading}
+            />
           </View>
 
           {/* Login Button */}
@@ -193,7 +171,13 @@ export default function LoginScreen({ navigation }: Props) {
           </TouchableOpacity>
 
           {/* Divider */}
-          <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 20 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginVertical: 20,
+            }}
+          >
             <View style={{ flex: 1, height: 1, backgroundColor: "#dadce0" }} />
             <Text
               style={{
@@ -208,7 +192,13 @@ export default function LoginScreen({ navigation }: Props) {
           </View>
 
           {/* Sign Up Link */}
-          <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center" }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
             <Text style={{ color: "#5f6368", fontSize: 14 }}>
               Don't have an account?{" "}
             </Text>
