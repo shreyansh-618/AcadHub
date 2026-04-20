@@ -11,7 +11,13 @@ import {
   EMBEDDING_MODEL_NAME,
   generateEmbedding,
 } from "./ai.service.js";
-import { splitTextIntoChunks } from "../utils/chunkText.js";
+import {
+  EMBEDDING_CHUNK_OVERLAP,
+  EMBEDDING_CHUNK_SIZE,
+  EMBEDDING_MAX_CHUNKS,
+  estimateChunkCount,
+  splitTextIntoChunks,
+} from "../utils/chunkText.js";
 
 const VECTOR_INDEX_NAME =
   process.env.VECTOR_SEARCH_INDEX_NAME || "resource_embedding_index";
@@ -22,6 +28,10 @@ const EMBEDDING_REQUEST_DELAY_MS = Number.parseInt(
 );
 const MIN_EMBEDDING_CHARS = Number.parseInt(
   process.env.MIN_EMBEDDING_CHARS || "100",
+  10,
+);
+const MIN_EMBEDDING_DOCUMENT_CHARS = Number.parseInt(
+  process.env.MIN_EMBEDDING_DOCUMENT_CHARS || "1000",
   10,
 );
 
@@ -67,6 +77,7 @@ export const indexResourceEmbeddings = async (resource, rawContent = "") => {
   const content =
     String(rawContent || resource?.extractedContent || "").trim() ||
     `${resource?.title || ""} ${resource?.description || ""}`.trim();
+  const documentContentHash = buildContentHash(content);
 
   if (!resource?._id || !content) {
     logger.warn(
@@ -79,6 +90,50 @@ export const indexResourceEmbeddings = async (resource, rawContent = "") => {
     `Indexing resource ${resource._id}: extracted text length=${content.length}`,
   );
 
+  if (content.length < MIN_EMBEDDING_DOCUMENT_CHARS) {
+    logger.info(
+      `Skipping embedding for resource ${resource._id}: small document (${content.length} chars)`,
+    );
+    await Embedding.deleteMany({ docId: resource._id });
+    await Resource.findByIdAndUpdate(resource._id, {
+      $set: {
+        extractedContent: content,
+        semanticIndexEligible: false,
+        embedded: false,
+        embeddingChunkCount: 0,
+        embeddingContentHash: null,
+        processingStatus: "pending",
+        processingError: `Semantic indexing skipped for small document (${content.length} < ${MIN_EMBEDDING_DOCUMENT_CHARS} chars)`,
+        nextEmbeddingRetryAt: null,
+      },
+    });
+    return { chunkCount: 0, status: "skipped_small_document" };
+  }
+
+  const existingDocEmbeddings = await Embedding.countDocuments({ docId: resource._id });
+  if (
+    existingDocEmbeddings > 0 &&
+    resource.embeddingContentHash === documentContentHash
+  ) {
+    logger.info(
+      `Using cached embeddings for resource ${resource._id}: chunkCount=${existingDocEmbeddings}`,
+    );
+    await Resource.findByIdAndUpdate(resource._id, {
+      $set: {
+        extractedContent: content,
+        semanticIndexEligible: true,
+        embedded: true,
+        embeddingChunkCount: existingDocEmbeddings,
+        embeddingContentHash: documentContentHash,
+        processingStatus: "indexed",
+        processingError: null,
+        nextEmbeddingRetryAt: null,
+        lastIndexedAt: new Date(),
+      },
+    });
+    return { chunkCount: existingDocEmbeddings, status: "cached" };
+  }
+
   await Resource.findByIdAndUpdate(resource._id, {
     $set: {
       processingStatus: "processing",
@@ -87,8 +142,21 @@ export const indexResourceEmbeddings = async (resource, rawContent = "") => {
     },
   });
 
-  const chunks = splitTextIntoChunks(content, { maxChars: 500 });
+  const estimatedChunkCount = estimateChunkCount(content.length, {
+    chunkSize: EMBEDDING_CHUNK_SIZE,
+    overlap: EMBEDDING_CHUNK_OVERLAP,
+  });
+  const chunks = splitTextIntoChunks(content, {
+    chunkSize: EMBEDDING_CHUNK_SIZE,
+    overlap: EMBEDDING_CHUNK_OVERLAP,
+    maxChunks: EMBEDDING_MAX_CHUNKS,
+  });
   logger.info(`Indexing resource ${resource._id}: chunks generated=${chunks.length}`);
+  if (estimatedChunkCount > EMBEDDING_MAX_CHUNKS) {
+    logger.warn(
+      `Chunk limit hit for resource ${resource._id}: ${estimatedChunkCount} -> ${EMBEDDING_MAX_CHUNKS}`,
+    );
+  }
 
   const eligibleChunks = chunks.filter((chunk) => chunk.charCount >= MIN_EMBEDDING_CHARS);
   const skippedChunks = chunks.length - eligibleChunks.length;
@@ -110,9 +178,11 @@ export const indexResourceEmbeddings = async (resource, rawContent = "") => {
     return { chunkCount: 0 };
   }
 
-  const embeddings = [];
-  try {
-    for (const [position, chunk] of eligibleChunks.entries()) {
+  const generateEmbeddingsWithLimit = async (chunksToEmbed) => {
+    const results = [];
+    const limitedChunks = chunksToEmbed.slice(0, EMBEDDING_MAX_CHUNKS);
+
+    for (const [position, chunk] of limitedChunks.entries()) {
       const contentHash = buildContentHash(chunk.content);
       const cachedEmbedding = await Embedding.findOne({
         contentHash,
@@ -124,9 +194,9 @@ export const indexResourceEmbeddings = async (resource, rawContent = "") => {
 
       if (cachedEmbedding?.embedding?.length === EMBEDDING_DIMENSIONS) {
         logger.info(
-          `Reusing cached embedding for resource ${resource._id} chunk=${chunk.index}`,
+          `Using cached chunk embedding ${position + 1}/${limitedChunks.length} for resource ${resource._id}`,
         );
-        embeddings.push(
+        results.push(
           validateEmbeddingRecord({
             docId: resource._id,
             chunkIndex: chunk.index,
@@ -138,30 +208,35 @@ export const indexResourceEmbeddings = async (resource, rawContent = "") => {
             embedding: cachedEmbedding.embedding,
           }),
         );
-        continue;
+      } else {
+        logger.info(
+          `Embedding ${position + 1}/${limitedChunks.length} for resource ${resource._id}`,
+        );
+        results.push(
+          validateEmbeddingRecord({
+            docId: resource._id,
+            chunkIndex: chunk.index,
+            content: chunk.content,
+            contentHash,
+            charCount: chunk.charCount,
+            embeddingProvider: AI_PROVIDER,
+            embeddingModel: EMBEDDING_MODEL_NAME,
+            embedding: await generateEmbedding(chunk.content),
+          }),
+        );
       }
 
-      logger.info(
-        `Generating embedding for resource ${resource._id} chunk=${chunk.index} chars=${chunk.charCount}`,
-      );
-
-      embeddings.push(
-        validateEmbeddingRecord({
-          docId: resource._id,
-          chunkIndex: chunk.index,
-          content: chunk.content,
-          contentHash,
-          charCount: chunk.charCount,
-          embeddingProvider: AI_PROVIDER,
-          embeddingModel: EMBEDDING_MODEL_NAME,
-          embedding: await generateEmbedding(chunk.content),
-        }),
-      );
-
-      if (position < eligibleChunks.length - 1) {
+      if (position < limitedChunks.length - 1) {
         await sleep(Math.max(EMBEDDING_REQUEST_DELAY_MS, 0));
       }
     }
+
+    return results;
+  };
+
+  let embeddings = [];
+  try {
+    embeddings = await generateEmbeddingsWithLimit(eligibleChunks);
   } catch (error) {
     logger.warn(
       `Embedding generation failed for resource ${resource._id}: ${error.message}`,
@@ -177,6 +252,9 @@ export const indexResourceEmbeddings = async (resource, rawContent = "") => {
         extractedContent: content,
         processingStatus: "indexed",
         semanticIndexEligible: true,
+        embedded: true,
+        embeddingChunkCount: embeddings.length,
+        embeddingContentHash: documentContentHash,
         processingError: null,
         nextEmbeddingRetryAt: null,
         lastIndexedAt: new Date(),
@@ -207,9 +285,18 @@ export const ensureResourceIsIndexed = async (resource) => {
     return { chunkCount: 0, status: "skipped" };
   }
 
+  if (
+    resource.embedded &&
+    resource.embeddingChunkCount > 0 &&
+    resource.embeddingContentHash &&
+    resource.embeddingContentHash === buildContentHash(resource.extractedContent || "")
+  ) {
+    return { chunkCount: resource.embeddingChunkCount, status: "cached" };
+  }
+
   const existingChunks = await Embedding.countDocuments({ docId: resource._id });
   if (existingChunks > 0) {
-    return { chunkCount: existingChunks };
+    return { chunkCount: existingChunks, status: "cached" };
   }
 
   if (
@@ -242,6 +329,8 @@ export const ensureResourceIsIndexed = async (resource) => {
         $set: {
           processingStatus: "pending_embedding",
           processingError: error.message,
+          embedded: false,
+          embeddingChunkCount: 0,
           nextEmbeddingRetryAt: nextRetryAt,
           lastEmbeddingAttemptAt: new Date(),
         },
@@ -256,6 +345,8 @@ export const ensureResourceIsIndexed = async (resource) => {
       $set: {
         processingStatus: "failed",
         processingError: error.message,
+        embedded: false,
+        embeddingChunkCount: 0,
         lastEmbeddingAttemptAt: new Date(),
       },
     });
@@ -292,6 +383,8 @@ export const reindexAllResources = async () => {
           $set: {
             processingStatus: "pending_embedding",
             processingError: error.message,
+            embedded: false,
+            embeddingChunkCount: 0,
             nextEmbeddingRetryAt: nextRetryAt,
             lastEmbeddingAttemptAt: new Date(),
           },
@@ -307,6 +400,8 @@ export const reindexAllResources = async () => {
         $set: {
           processingStatus: "failed",
           processingError: error.message,
+          embedded: false,
+          embeddingChunkCount: 0,
         },
       }).catch(() => {});
     }
@@ -338,7 +433,7 @@ export const reindexPendingResources = async ({ limit = 25 } = {}) => {
   for (const resource of resources) {
     try {
       const result = await ensureResourceIsIndexed(resource);
-      if (result.status === "indexed") {
+      if (result.status === "indexed" || result.status === "cached") {
         indexed += 1;
       } else {
         deferred += 1;

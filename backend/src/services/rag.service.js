@@ -5,7 +5,10 @@ import {
   generateAnswer,
   generateEmbedding,
 } from "./ai.service.js";
-import { findRelevantChunks } from "./resourceIndex.service.js";
+import {
+  ensureResourceIsIndexed,
+  findRelevantChunks,
+} from "./resourceIndex.service.js";
 
 const AI_UNAVAILABLE_MESSAGE =
   "AI is temporarily unavailable. Please try again.";
@@ -137,6 +140,19 @@ export const answerQuestion = async ({ question, resourceIds = [] }) => {
   const startedAt = Date.now();
 
   try {
+    if (resourceIds.length > 0) {
+      const resourcesToIndex = await Resource.find({
+        _id: { $in: resourceIds },
+        semanticIndexEligible: true,
+      });
+
+      for (const resource of resourcesToIndex) {
+        if (!resource.embedded) {
+          await ensureResourceIsIndexed(resource);
+        }
+      }
+    }
+
     const questionEmbedding = await generateEmbedding(question);
     const chunkMatches = await findRelevantChunks({
       questionEmbedding,

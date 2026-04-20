@@ -22,7 +22,7 @@ import {
 } from "../utils/security.js";
 
 const MIN_INDEXABLE_CONTENT_CHARS = Number.parseInt(
-  process.env.MIN_EMBEDDING_CHARS || "100",
+  process.env.MIN_EMBEDDING_DOCUMENT_CHARS || "1000",
   10,
 );
 const SEMANTIC_RESOURCE_TYPES = new Set(["pdf", "docx", "pptx", "txt"]);
@@ -234,6 +234,9 @@ export const uploadResource = async (req, res) => {
       extractedContent,
       isApproved: true, // Auto-approve uploads
       semanticIndexEligible,
+      embedded: false,
+      embeddingChunkCount: 0,
+      embeddingContentHash: null,
       processingStatus,
       processingError,
     });

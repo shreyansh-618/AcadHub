@@ -135,6 +135,19 @@ const resourceSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    embedded: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    embeddingChunkCount: {
+      type: Number,
+      default: 0,
+    },
+    embeddingContentHash: {
+      type: String,
+      default: null,
+    },
     lastEmbeddingAttemptAt: Date,
     nextEmbeddingRetryAt: Date,
     lastIndexedAt: Date,

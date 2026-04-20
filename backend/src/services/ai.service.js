@@ -21,10 +21,15 @@ export const EMBEDDING_MODEL_NAME = GEMINI_EMBEDDING_MODEL;
 export const CHAT_MODEL_NAME = GEMINI_CHAT_MODEL;
 
 const AI_COOLDOWN_MS = 5 * 60 * 1000;
+const MAX_EMBEDDING_CALLS_PER_PROCESS = Number.parseInt(
+  process.env.MAX_EMBEDDING_CALLS_PER_PROCESS || "100",
+  10,
+);
 
 let providerCooldownUntil = 0;
 let lastCooldownReason = null;
 let resolvedChatModelName = null;
+let embeddingCalls = 0;
 
 export class AiProviderUnavailableError extends Error {
   constructor(message, options = {}) {
@@ -141,6 +146,16 @@ export const generateEmbedding = async (text) => {
   const input = normalizePromptText(text, 8000);
   if (!input) {
     throw new Error("Text required for embedding");
+  }
+
+  embeddingCalls += 1;
+  if (embeddingCalls > MAX_EMBEDDING_CALLS_PER_PROCESS) {
+    const message = `Embedding quota limit reached (${MAX_EMBEDDING_CALLS_PER_PROCESS} calls per process)`;
+    logger.warn(message);
+    throw new AiProviderUnavailableError(message, {
+      code: "EMBEDDING_QUOTA_LIMIT",
+      status: 429,
+    });
   }
 
   const result = await runAiOperation("Embedding", async () =>

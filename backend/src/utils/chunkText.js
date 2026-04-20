@@ -1,3 +1,16 @@
+const DEFAULT_CHUNK_SIZE = Number.parseInt(
+  process.env.EMBEDDING_CHUNK_SIZE || "1200",
+  10,
+);
+const DEFAULT_CHUNK_OVERLAP = Number.parseInt(
+  process.env.EMBEDDING_CHUNK_OVERLAP || "150",
+  10,
+);
+const DEFAULT_MAX_CHUNKS = Number.parseInt(
+  process.env.MAX_EMBEDDING_CHUNKS || "50",
+  10,
+);
+
 const normalizeChunkText = (value = "") =>
   String(value)
     .replace(/\r/g, "")
@@ -5,72 +18,77 @@ const normalizeChunkText = (value = "") =>
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
-const splitOversizedSegment = (segment, maxChars) => {
-  const pieces = [];
-  let remaining = segment.trim();
+export const EMBEDDING_CHUNK_SIZE = Number.isFinite(DEFAULT_CHUNK_SIZE)
+  ? Math.max(DEFAULT_CHUNK_SIZE, 200)
+  : 1200;
+export const EMBEDDING_CHUNK_OVERLAP = Number.isFinite(DEFAULT_CHUNK_OVERLAP)
+  ? Math.max(Math.min(DEFAULT_CHUNK_OVERLAP, EMBEDDING_CHUNK_SIZE - 1), 0)
+  : 150;
+export const EMBEDDING_MAX_CHUNKS = Number.isFinite(DEFAULT_MAX_CHUNKS)
+  ? Math.max(DEFAULT_MAX_CHUNKS, 1)
+  : 50;
 
-  while (remaining.length > maxChars) {
-    const slice = remaining.slice(0, maxChars);
-    const breakpoints = [
-      slice.lastIndexOf("\n"),
-      slice.lastIndexOf(". "),
-      slice.lastIndexOf("? "),
-      slice.lastIndexOf("! "),
-      slice.lastIndexOf(" "),
-    ];
-    const splitAt = breakpoints.find((point) => point > maxChars * 0.5);
-    const chunk =
-      splitAt && splitAt > 0 ? remaining.slice(0, splitAt + 1) : slice;
-
-    pieces.push(normalizeChunkText(chunk));
-    remaining = remaining.slice(chunk.length).trim();
+export const estimateChunkCount = (
+  textLength,
+  {
+    chunkSize = EMBEDDING_CHUNK_SIZE,
+    overlap = EMBEDDING_CHUNK_OVERLAP,
+  } = {},
+) => {
+  const safeLength = Math.max(Number(textLength) || 0, 0);
+  if (safeLength === 0) {
+    return 0;
   }
 
-  if (remaining) {
-    pieces.push(normalizeChunkText(remaining));
-  }
+  const safeChunkSize = Math.max(Number(chunkSize) || EMBEDDING_CHUNK_SIZE, 1);
+  const safeOverlap = Math.max(
+    Math.min(Number(overlap) || EMBEDDING_CHUNK_OVERLAP, safeChunkSize - 1),
+    0,
+  );
+  const step = Math.max(safeChunkSize - safeOverlap, 1);
 
-  return pieces.filter(Boolean);
+  return Math.ceil(Math.max(safeLength - safeOverlap, 0) / step);
 };
 
-export const splitTextIntoChunks = (text, { maxChars = 500 } = {}) => {
+export const splitTextIntoChunks = (
+  text,
+  {
+    chunkSize = EMBEDDING_CHUNK_SIZE,
+    overlap = EMBEDDING_CHUNK_OVERLAP,
+    maxChunks = EMBEDDING_MAX_CHUNKS,
+  } = {},
+) => {
   const normalized = normalizeChunkText(text);
   if (!normalized) {
     return [];
   }
 
-  const segments = normalized
-    .split(/\n{2,}/)
-    .flatMap((segment) =>
-      segment.length > maxChars
-        ? splitOversizedSegment(segment, maxChars)
-        : [normalizeChunkText(segment)],
-    )
-    .filter(Boolean);
+  const safeChunkSize = Math.max(Number(chunkSize) || EMBEDDING_CHUNK_SIZE, 1);
+  const safeOverlap = Math.max(
+    Math.min(Number(overlap) || EMBEDDING_CHUNK_OVERLAP, safeChunkSize - 1),
+    0,
+  );
+  const safeMaxChunks = Math.max(Number(maxChunks) || EMBEDDING_MAX_CHUNKS, 1);
+  const step = Math.max(safeChunkSize - safeOverlap, 1);
 
   const chunks = [];
-  let current = "";
+  let cursor = 0;
 
-  for (const segment of segments) {
-    const candidate = current ? `${current}\n\n${segment}` : segment;
-    if (candidate.length <= maxChars) {
-      current = candidate;
-      continue;
+  while (cursor < normalized.length && chunks.length < safeMaxChunks) {
+    const content = normalizeChunkText(
+      normalized.slice(cursor, cursor + safeChunkSize),
+    );
+
+    if (content) {
+      chunks.push({
+        index: chunks.length,
+        content,
+        charCount: content.length,
+      });
     }
 
-    if (current) {
-      chunks.push(current);
-    }
-    current = segment;
+    cursor += step;
   }
 
-  if (current) {
-    chunks.push(current);
-  }
-
-  return chunks.map((content, index) => ({
-    index,
-    content,
-    charCount: content.length,
-  }));
+  return chunks;
 };
