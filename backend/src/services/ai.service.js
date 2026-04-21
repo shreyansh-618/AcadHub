@@ -109,10 +109,12 @@ const runAiOperation = async (operationName, fn) => {
       `${operationName} error: ${error.message} (status: ${error.status})`,
     );
 
-    if (isQuotaOrRateLimitError(error)) {
+    // Only trigger system cooldown for Embedding (Gemini quota exhaustion)
+    // Chat/OpenRouter rate limits are transient and should not block the system
+    if (operationName === "Embedding" && isQuotaOrRateLimitError(error)) {
       providerCooldownUntil = Date.now() + AI_COOLDOWN_MS;
       lastCooldownReason =
-        "Gemini quota or rate limit reached. AI features are temporarily unavailable.";
+        "Embedding service temporarily unavailable. Please try again later.";
       logger.warn(`${operationName} skipped: ${lastCooldownReason}`);
       throw new AiProviderUnavailableError(lastCooldownReason);
     }
@@ -273,10 +275,7 @@ ${safeQuestion}`;
       ],
     });
 
-    const response = await Promise.race([
-      openRouterCall,
-      createTimeout(5000),
-    ]);
+    const response = await Promise.race([openRouterCall, createTimeout(5000)]);
 
     if (resolvedChatModelName !== model) {
       resolvedChatModelName = model;

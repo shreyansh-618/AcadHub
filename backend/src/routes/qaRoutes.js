@@ -105,14 +105,7 @@ const handleAnswer = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    console.error("=== QA ROUTE ERROR ===");
-    console.error(`Message: ${error.message}`);
-    console.error(`Status: ${error.status}`);
-    console.error(`Error Name: ${error.name}`);
-    console.error(`Details:`, error.details);
-    console.error(`Stack:`, error.stack);
-    console.error("=====================");
-    logger.error(`QA route error: ${error.message} (status: ${error.status})`);
+    logger.error(`QA error: ${error.message} (status: ${error.status})`);
 
     return res.json({
       success: true,
