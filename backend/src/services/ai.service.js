@@ -1,15 +1,10 @@
 import { logger } from "../config/logger.js";
 
-export const AI_PROVIDER = "gemini";
+export const AI_PROVIDER = "gemini"; // Gemini v1beta (free tier)
 const GEMINI_EMBEDDING_MODEL =
   process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001";
-const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-2.0-flash";
-const GEMINI_CHAT_MODEL_FALLBACKS = (
-  process.env.GEMINI_CHAT_MODEL_FALLBACKS || "gemini-2.0-flash"
-)
-  .split(",")
-  .map((value) => value.trim())
-  .filter(Boolean);
+const GEMINI_CHAT_MODEL =
+  process.env.GEMINI_CHAT_MODEL || "gemini-1.5-flash";
 
 export const EMBEDDING_DIMENSIONS = Number.parseInt(
   process.env.EMBEDDING_DIMENSIONS || "3072",
@@ -50,14 +45,6 @@ const getGeminiApiKey = () => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not configured");
-  }
-  return apiKey;
-};
-
-const getOpenRouterApiKey = () => {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY is not configured");
   }
   return apiKey;
 };
@@ -110,7 +97,6 @@ const runAiOperation = async (operationName, fn) => {
     );
 
     // Only trigger system cooldown for Embedding (Gemini quota exhaustion)
-    // Chat/OpenRouter rate limits are transient and should not block the system
     if (operationName === "Embedding" && isQuotaOrRateLimitError(error)) {
       providerCooldownUntil = Date.now() + AI_COOLDOWN_MS;
       lastCooldownReason =
@@ -123,7 +109,7 @@ const runAiOperation = async (operationName, fn) => {
   }
 };
 
-const callGemini = async ({ version = "v1", model, action, body }) => {
+const callGemini = async ({ version = "v1beta", model, action, body }) => {
   const apiKey = getGeminiApiKey();
   const url = `https://generativelanguage.googleapis.com/${version}/models/${model}:${action}?key=${apiKey}`;
 
@@ -151,48 +137,12 @@ const callGemini = async ({ version = "v1", model, action, body }) => {
   return data;
 };
 
-const callOpenRouter = async ({ model, messages }) => {
-  const apiKey = getOpenRouterApiKey();
-  const url = "https://openrouter.ai/api/v1/chat/completions";
-
-  logger.debug(`Calling OpenRouter: ${model}`);
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-    }),
-  });
-
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    const error = new Error(
-      data?.error?.message || `OpenRouter API error (${response.status})`,
-    );
-    error.status = response.status;
-    error.details = data;
-    throw error;
-  }
-
-  return data;
-};
-
 const cleanJsonFence = (value = "") =>
   String(value)
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/i, "")
     .replace(/\s*```$/i, "")
     .trim();
-
-const getChatModelCandidates = () => [
-  ...new Set([GEMINI_CHAT_MODEL, ...GEMINI_CHAT_MODEL_FALLBACKS]),
-];
 
 export const generateEmbedding = async (text) => {
   const input = normalizePromptText(text, 8000);
@@ -257,35 +207,35 @@ Question:
 ${safeQuestion}`;
 
   const result = await runAiOperation("Chat", async () => {
-    const model =
-      process.env.OPENROUTER_CHAT_MODEL || "google/gemma-2-9b-it:free";
+    logger.debug(`Chat: Calling Gemini v1beta with model ${GEMINI_CHAT_MODEL}`);
 
-    // OpenRouter (Gemma) with 5s timeout - no fallback
-    const openRouterCall = callOpenRouter({
-      model,
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt,
-        },
-        {
-          role: "user",
-          content: userMessage,
-        },
-      ],
+    const response = await callGemini({
+      version: "v1beta",
+      model: GEMINI_CHAT_MODEL,
+      action: "generateContent",
+      body: {
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `${systemPrompt}\n\n${userMessage}`,
+              },
+            ],
+          },
+        ],
+      },
     });
 
-    const response = await Promise.race([openRouterCall, createTimeout(5000)]);
-
-    if (resolvedChatModelName !== model) {
-      resolvedChatModelName = model;
-      logger.info(`Chat: Using ${model} (OpenRouter)`);
+    if (resolvedChatModelName !== GEMINI_CHAT_MODEL) {
+      resolvedChatModelName = GEMINI_CHAT_MODEL;
+      logger.info(`Chat: Using ${GEMINI_CHAT_MODEL} (Gemini v1beta)`);
     }
 
     return response;
   });
 
-  return result?.choices?.[0]?.message?.content || "No response";
+  return result?.candidates?.[0]?.content?.parts?.[0]?.text || "No response";
 };
 
 export const summarizeText = async (text) => {
