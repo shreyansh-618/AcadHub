@@ -1,6 +1,7 @@
-import { useState } from "react";
+ï»¿import { useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
+import { Eye, EyeOff } from "lucide-react";
 import { authService } from "@/services/auth";
 
 export default function SignupPage() {
@@ -12,11 +13,13 @@ export default function SignupPage() {
   const [department, setDepartment] = useState("Computer Science");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const handleSignup = async (e) => {
     e.preventDefault();
-    if (loading) return; // Prevent double submission
+    if (loading) return;
 
-    // Validation
     if (!name.trim()) {
       toast.error("Please enter your name");
       return;
@@ -40,16 +43,9 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const result = await authService.signup(
-        name,
-        email,
-        password,
-        role,
-        department,
-      );
+      const result = await authService.signup(name, email, password, role, department);
       if (result?.data?.user) {
-        toast.success("Account created successfully!");
-        // Navigation happens automatically via App.jsx auth state change
+        toast.success("Account created successfully");
       }
     } catch (error) {
       toast.error(error.message || "Signup failed. Please try again.");
@@ -58,13 +54,12 @@ export default function SignupPage() {
   };
 
   const handleGoogleSignup = async () => {
-    if (googleLoading) return; // Prevent double submission
+    if (googleLoading) return;
     setGoogleLoading(true);
     try {
       const result = await authService.signupWithGoogle(role, department);
       if (result?.data?.user) {
-        toast.success("Account created with Google!");
-        // Navigation happens automatically via App.jsx auth state change
+        toast.success("Account created with Google");
       }
     } catch (error) {
       toast.error(error.message || "Google signup failed. Please try again.");
@@ -73,30 +68,19 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-3 sm:px-4 py-6 sm:py-12">
-      {/* Background gradient */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 sm:w-96 h-48 sm:h-96 bg-blue-500 rounded-full opacity-10 blur-3xl"></div>
-        <div className="absolute bottom-0 right-1/4 w-48 sm:w-96 h-48 sm:h-96 bg-purple-500 rounded-full opacity-10 blur-3xl"></div>
-      </div>
-
+    <div className="flex min-h-screen items-center justify-center px-3 py-8 sm:px-4 sm:py-12">
       <div className="w-full max-w-sm">
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-2">
-            Welcome!
-          </h1>
-          <p className="text-sm sm:text-base text-slate-600">
-            Create your account to get started
+        <div className="mb-6 text-center sm:mb-8">
+          <h1 className="mb-2 text-3xl font-bold text-slate-900 sm:text-4xl">Create account</h1>
+          <p className="text-sm text-slate-600 sm:text-base">
+            Add the basics now. You can change the rest later from your profile.
           </p>
         </div>
 
-        {/* Form Card */}
         <div className="glass-lg p-6 sm:p-8">
-          <form onSubmit={handleSignup} className="space-y-4 sm:space-y-5">
-            {/* Name Field */}
+          <form onSubmit={handleSignup} className="space-y-5">
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
+              <label className="mb-2 block text-xs font-semibold text-slate-700 sm:text-sm">
                 Full Name
               </label>
               <input
@@ -109,9 +93,8 @@ export default function SignupPage() {
               />
             </div>
 
-            {/* Email Field */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
+              <label className="mb-2 block text-xs font-semibold text-slate-700 sm:text-sm">
                 Email Address
               </label>
               <input
@@ -124,25 +107,19 @@ export default function SignupPage() {
               />
             </div>
 
-            {/* Role Selection */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
+              <label className="mb-2 block text-xs font-semibold text-slate-700 sm:text-sm">
                 Role
               </label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="input-field text-sm"
-              >
+              <select value={role} onChange={(e) => setRole(e.target.value)} className="input-field text-sm">
                 <option value="student">Student</option>
                 <option value="faculty">Faculty</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
 
-            {/* Department Selection */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
+              <label className="mb-2 block text-xs font-semibold text-slate-700 sm:text-sm">
                 Department
               </label>
               <select
@@ -159,73 +136,79 @@ export default function SignupPage() {
               </select>
             </div>
 
-            {/* Password Field */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
+              <label className="mb-2 block text-xs font-semibold text-slate-700 sm:text-sm">
                 Password
               </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input-field text-sm"
-                placeholder="••••••••"
-                required
-              />
-              <p className="text-xs text-slate-500 mt-1">
-                At least 6 characters
-              </p>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input-field pr-12 text-sm"
+                  placeholder="At least 6 characters"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
-            {/* Confirm Password Field */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
+              <label className="mb-2 block text-xs font-semibold text-slate-700 sm:text-sm">
                 Confirm Password
               </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="input-field text-sm"
-                placeholder="••••••••"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="input-field pr-12 text-sm"
+                  placeholder="Re-enter your password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((current) => !current)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800"
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+              className="btn-primary w-full text-sm sm:text-base disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? "Creating Account..." : "Create Account"}
+              {loading ? "Creating account..." : "Create Account"}
             </button>
           </form>
 
-          {/* Divider */}
           <div className="relative my-5 sm:my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-200"></div>
             </div>
             <div className="relative flex justify-center text-xs sm:text-sm">
-              <span className="px-2 bg-white/80 text-slate-500">
-                Or continue with
-              </span>
+              <span className="bg-white px-2 text-slate-500">Or continue with</span>
             </div>
           </div>
 
-          {/* Google Signup Button */}
           <button
             type="button"
             onClick={handleGoogleSignup}
             disabled={googleLoading}
-            className="w-full flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-200 text-slate-800 font-medium hover:bg-white transition disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
+            className="glass-sm flex w-full items-center justify-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <svg
-              className="w-4 sm:w-5 h-4 sm:h-5"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
+            <svg className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 24 24" fill="currentColor">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                 fill="#4285F4"
@@ -243,47 +226,23 @@ export default function SignupPage() {
                 fill="#EA4335"
               ></path>
             </svg>
-            <span className="hidden sm:inline">
-              {googleLoading ? "Signing up..." : "Sign up with Google"}
-            </span>
-            <span className="sm:hidden">
-              {googleLoading ? "Signing up..." : "Google"}
-            </span>
+            <span>{googleLoading ? "Signing up..." : "Sign up with Google"}</span>
           </button>
 
-          {/* Login Link */}
           <div className="relative my-5 sm:my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-200"></div>
             </div>
             <div className="relative flex justify-center text-xs sm:text-sm">
-              <span className="px-2 bg-white/80 text-slate-500">
-                Already have an account?
-              </span>
+              <span className="bg-white px-2 text-slate-500">Already have an account?</span>
             </div>
           </div>
 
-          <Link
-            to="/login"
-            className="block w-full text-center btn-ghost text-sm sm:text-base"
-          >
+          <Link to="/login" className="btn-ghost block w-full text-center text-sm sm:text-base">
             Sign In
           </Link>
         </div>
-
-        {/* Terms */}
-        <p className="text-center text-xs text-slate-500 mt-6">
-          By signing up, you agree to our{" "}
-          <a href="#" className="text-slate-700 hover:text-slate-950">
-            Terms of Service
-          </a>{" "}
-          and{" "}
-          <a href="#" className="text-slate-700 hover:text-slate-950">
-            Privacy Policy
-          </a>
-        </p>
       </div>
     </div>
   );
 }
-

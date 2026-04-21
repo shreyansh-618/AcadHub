@@ -46,11 +46,16 @@ function AppContent({ user, loading }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
+        <div className="max-w-sm rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <div className="mb-4">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
           </div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-base font-semibold text-slate-900">
+            Waking up server...
+          </p>
+          <p className="mt-2 text-sm text-slate-600">
+            This may take a few seconds on the deployed app.
+          </p>
         </div>
       </div>
     );
@@ -232,11 +237,16 @@ export default function App() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
+        <div className="max-w-sm rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <div className="mb-4">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
           </div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-base font-semibold text-slate-900">
+            Waking up server...
+          </p>
+          <p className="mt-2 text-sm text-slate-600">
+            This may take a few seconds on the deployed app.
+          </p>
         </div>
       </div>
     );

@@ -149,13 +149,11 @@ const QAInterface = ({ resourceId = null, onClose = null }) => {
 
       {isLoading && (
         <div className="qa-thinking-card">
-          <div className="thinking-orb">
-            <span className="spinner"></span>
-          </div>
           <div>
-            <p className="thinking-title">AI is reading the document</p>
+            <p className="thinking-title">Waking up server...</p>
             <p className="thinking-subtitle">
-              Retrieving chunks, checking citations, and preparing a grounded answer.
+              This may take a few seconds on the deployed app. After that, the answer
+              will be based only on the document content we can retrieve.
             </p>
           </div>
         </div>
@@ -186,7 +184,7 @@ const QAInterface = ({ resourceId = null, onClose = null }) => {
             </div>
             <div className="qa-answer-text">{answer}</div>
             <div className="qa-guardrail">
-              Answer generated only from retrieved document content.
+              Answer based only on the document content that was retrieved.
             </div>
           </div>
 
@@ -239,9 +237,9 @@ const QAInterface = ({ resourceId = null, onClose = null }) => {
       {!isLoading && !answer && !error && (
         <div className="qa-empty-state">
           <p className="empty-icon">AI</p>
-          <p className="empty-text">Ask a document-grounded question</p>
+          <p className="empty-text">Ask a question about this document</p>
           <p className="empty-hint">
-            You&apos;ll get citations, confidence, timing, and visible source evidence.
+            You&apos;ll see the answer, timing, confidence, and source snippets.
           </p>
         </div>
       )}

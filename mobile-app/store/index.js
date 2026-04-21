@@ -74,6 +74,11 @@ export const useAuthStore = create((set, get) => ({
     await AsyncStorage.removeItem("user");
   },
 
+  setUser: async (user) => {
+    set((state) => ({ user, token: state.token }));
+    await AsyncStorage.setItem("user", JSON.stringify(user));
+  },
+
   // Set loading
   setLoading: (isLoading) => set({ isLoading }),
 

@@ -1,15 +1,14 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import { useAuthStore } from "../store";
 import { authService } from "../services/api";
 
-// Screens
 import HomeScreen from "./home";
 import ResourcesScreen from "./resources";
 import AssistantScreen from "./assistant";
@@ -26,13 +25,20 @@ function HomeTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#007AFF",
-        tabBarInactiveTintColor: "#999",
+        tabBarActiveTintColor: "#0a66c2",
+        tabBarInactiveTintColor: "#667085",
         tabBarStyle: {
           borderTopWidth: 1,
-          borderTopColor: "#f0f0f0",
-          paddingBottom: 5,
-          height: 60,
+          borderTopColor: "#d0d7de",
+          backgroundColor: "#ffffff",
+          paddingBottom: 8,
+          paddingTop: 8,
+          height: 64,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: "600",
+          fontFamily: "Roboto",
         },
       }}
     >
@@ -88,39 +94,17 @@ function AuthStack() {
         cardStyle: { backgroundColor: "#fff" },
       }}
     >
-      <Stack.Screen
-        name="login"
-        component={LoginScreen}
-        options={{ animationEnabled: false }}
-      />
-      <Stack.Screen
-        name="signup"
-        component={SignupScreen}
-        options={{ animationEnabled: false }}
-      />
+      <Stack.Screen name="login" component={LoginScreen} options={{ animationEnabled: false }} />
+      <Stack.Screen name="signup" component={SignupScreen} options={{ animationEnabled: false }} />
     </Stack.Navigator>
   );
 }
 
 function AppStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen
-        name="home-tabs"
-        component={HomeTabs}
-        options={{ animationEnabled: false }}
-      />
-      <Stack.Screen
-        name="resource-detail"
-        component={ResourceDetailScreen}
-        options={{
-          presentation: "modal",
-        }}
-      />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="home-tabs" component={HomeTabs} options={{ animationEnabled: false }} />
+      <Stack.Screen name="resource-detail" component={ResourceDetailScreen} options={{ presentation: "modal" }} />
     </Stack.Navigator>
   );
 }
@@ -134,27 +118,17 @@ export default function RootLayout() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        console.log("🚀 Initializing AcadHub app...");
-
-        // Initialize Firebase
         await authService.initialize();
-        console.log("✓ Firebase initialized");
-
-        // Initialize auth store
         await initializeAuth();
-        console.log("✓ Auth store initialized");
-
         setIsInitialized(true);
-        console.log("✓ App initialization complete");
       } catch (error) {
-        console.error("✗ App initialization failed:", error);
+        console.error("App initialization failed:", error);
         setInitError(error);
-        // Still allow app to continue
         setIsInitialized(true);
       }
     };
 
-    initializeApp();
+    void initializeApp();
   }, [initializeAuth]);
 
   if (!fontsLoaded || !isInitialized) {
@@ -167,30 +141,42 @@ export default function RootLayout() {
           backgroundColor: "#fff",
         }}
       >
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#0a66c2" />
+        <Text
+          style={{
+            marginTop: 16,
+            color: "#1f2328",
+            fontSize: 16,
+            fontWeight: "600",
+            fontFamily: "Roboto",
+          }}
+        >
+          Waking up server...
+        </Text>
+        <Text
+          style={{
+            marginTop: 6,
+            color: "#667085",
+            fontSize: 14,
+            textAlign: "center",
+            paddingHorizontal: 28,
+            lineHeight: 22,
+            fontFamily: "Roboto",
+          }}
+        >
+          This may take a few seconds on the deployed app.
+        </Text>
       </View>
     );
   }
 
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{
-          headerShown: false,
-        }}
-      >
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
         {token ? (
-          <Stack.Screen
-            name="app"
-            component={AppStack}
-            options={{ animationEnabled: false }}
-          />
+          <Stack.Screen name="app" component={AppStack} options={{ animationEnabled: false }} />
         ) : (
-          <Stack.Screen
-            name="auth"
-            component={AuthStack}
-            options={{ animationEnabled: false }}
-          />
+          <Stack.Screen name="auth" component={AuthStack} options={{ animationEnabled: false }} />
         )}
       </Stack.Navigator>
     </NavigationContainer>

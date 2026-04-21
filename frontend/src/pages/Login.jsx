@@ -1,22 +1,24 @@
-import { useState } from "react";
+ï»¿import { useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
+import { Eye, EyeOff } from "lucide-react";
 import { authService } from "@/services/auth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (loading) return; // Prevent double submission
+    if (loading) return;
     setLoading(true);
 
     try {
       const result = await authService.login(email, password);
       if (result?.data?.user) {
-        toast.success("Login successful!");
-        // Navigation happens automatically via App.jsx auth state change
+        toast.success("Login successful");
       }
     } catch (error) {
       toast.error(error.message || "Login failed");
@@ -25,13 +27,12 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
-    if (loading) return; // Prevent double submission
+    if (loading) return;
     setLoading(true);
     try {
       const result = await authService.loginWithGoogle();
       if (result?.data?.user) {
-        toast.success("Login successful!");
-        // Navigation happens automatically via App.jsx auth state change
+        toast.success("Login successful");
       }
     } catch (error) {
       toast.error(error.message || "Login failed");
@@ -40,30 +41,19 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-3 sm:px-4 py-6 sm:py-12">
-      {/* Background gradient */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute top-0 right-1/3 w-48 sm:w-96 h-48 sm:h-96 bg-purple-500 rounded-full opacity-10 blur-3xl"></div>
-        <div className="absolute bottom-0 left-1/4 w-48 sm:w-96 h-48 sm:h-96 bg-blue-500 rounded-full opacity-10 blur-3xl"></div>
-      </div>
-
+    <div className="flex min-h-screen items-center justify-center px-3 py-8 sm:px-4 sm:py-12">
       <div className="w-full max-w-sm">
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-2">
-            Welcome Back!
-          </h1>
-          <p className="text-sm sm:text-base text-slate-600">
-            Sign in to your account
+        <div className="mb-6 text-center sm:mb-8">
+          <h1 className="mb-2 text-3xl font-bold text-slate-900 sm:text-4xl">Sign in</h1>
+          <p className="text-sm text-slate-600 sm:text-base">
+            Use your email and password to open your account.
           </p>
         </div>
 
-        {/* Login Card */}
-        <div className="glass-lg p-6 sm:p-8 mb-6">
-          <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
-            {/* Email Field */}
+        <div className="glass-lg mb-6 p-6 sm:p-8">
+          <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
+              <label className="mb-2 block text-xs font-semibold text-slate-700 sm:text-sm">
                 Email Address
               </label>
               <input
@@ -76,68 +66,64 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* Password Field */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
+              <label className="mb-2 block text-xs font-semibold text-slate-700 sm:text-sm">
                 Password
               </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input-field text-sm"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input-field pr-12 text-sm"
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
-            {/* Remember and Forgot */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs sm:text-sm">
-              <label className="flex items-center gap-2 cursor-pointer">
+            <div className="flex flex-col items-start justify-between gap-2 text-xs sm:flex-row sm:items-center sm:text-sm">
+              <label className="flex cursor-pointer items-center gap-2">
                 <input type="checkbox" className="rounded border-slate-300" />
-                <span className="text-slate-500">Remember me</span>
+                <span className="text-slate-500">Keep me signed in on this device</span>
               </label>
-              <a
-                href="#"
-                className="text-slate-600 hover:text-slate-900 transition-colors"
-              >
+              <a href="#" className="text-slate-600 transition-colors hover:text-slate-900">
                 Forgot password?
               </a>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+              className="btn-primary w-full text-sm sm:text-base disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
-          {/* Divider */}
           <div className="relative my-5 sm:my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-200"></div>
             </div>
             <div className="relative flex justify-center text-xs sm:text-sm">
-              <span className="px-2 bg-white/80 text-slate-500">
-                Or continue with
-              </span>
+              <span className="bg-white px-2 text-slate-500">Or continue with</span>
             </div>
           </div>
 
-          {/* Google Login Button */}
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="glass-sm w-full rounded-xl py-2.5 sm:py-3 flex items-center justify-center gap-2 transition-all duration-200 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 text-sm sm:text-base"
+            className="glass-sm flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm sm:text-base disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <svg
-              className="w-4 sm:w-5 h-4 sm:h-5"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="currentColor" viewBox="0 0 24 24">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                 fill="#4285F4"
@@ -155,19 +141,13 @@ export default function LoginPage() {
                 fill="#EA4335"
               />
             </svg>
-            <span className="font-medium text-slate-800">
-              {loading ? "Loading..." : "Google"}
-            </span>
+            <span className="font-medium text-slate-800">{loading ? "Loading..." : "Google"}</span>
           </button>
         </div>
 
-        {/* Sign Up Link */}
-        <p className="text-center text-slate-500 text-xs sm:text-sm">
-          Don't have an account?{" "}
-          <Link
-            to="/signup"
-            className="text-slate-700 hover:text-slate-950 font-semibold transition-colors"
-          >
+        <p className="text-center text-xs text-slate-500 sm:text-sm">
+          Don&apos;t have an account?{" "}
+          <Link to="/signup" className="font-semibold text-slate-700 transition-colors hover:text-slate-950">
             Sign up here
           </Link>
         </p>
@@ -175,4 +155,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

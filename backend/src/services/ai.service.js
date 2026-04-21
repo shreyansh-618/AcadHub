@@ -3,8 +3,7 @@ import { logger } from "../config/logger.js";
 export const AI_PROVIDER = "gemini";
 const GEMINI_EMBEDDING_MODEL =
   process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001";
-const GEMINI_CHAT_MODEL =
-  process.env.GEMINI_CHAT_MODEL || "gemini-1.5-flash";
+const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-1.5-flash";
 const GEMINI_CHAT_MODEL_FALLBACKS = (
   process.env.GEMINI_CHAT_MODEL_FALLBACKS ||
   "gemini-2.5-flash,gemini-2.0-flash,gemini-1.5-flash,gemini-1.5-pro"
@@ -139,8 +138,9 @@ const cleanJsonFence = (value = "") =>
     .replace(/\s*```$/i, "")
     .trim();
 
-const getChatModelCandidates = () =>
-  [...new Set([GEMINI_CHAT_MODEL, ...GEMINI_CHAT_MODEL_FALLBACKS])];
+const getChatModelCandidates = () => [
+  ...new Set([GEMINI_CHAT_MODEL, ...GEMINI_CHAT_MODEL_FALLBACKS]),
+];
 
 export const generateEmbedding = async (text) => {
   const input = normalizePromptText(text, 8000);
@@ -215,7 +215,7 @@ ${safeQuestion}
     for (const modelName of [...new Set(candidateModels)]) {
       try {
         const response = await callGemini({
-          version: "v1",
+          version: "v1beta",
           model: modelName,
           action: "generateContent",
           body: {
@@ -257,7 +257,10 @@ ${safeQuestion}
 
 export const summarizeText = async (text) => {
   try {
-    return await generateAnswer(text, "Summarize this in 3-4 concise sentences.");
+    return await generateAnswer(
+      text,
+      "Summarize this in 3-4 concise sentences.",
+    );
   } catch (err) {
     logger.warn(`Summary skipped: ${err.message}`);
     return null;

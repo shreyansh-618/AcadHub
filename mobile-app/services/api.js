@@ -243,6 +243,28 @@ export const authService = {
       return null;
     }
   },
+
+  async getProfile() {
+    try {
+      const response = await apiClient.get("/users/profile");
+      const payload = extractPayload(response.data);
+      return payload.user || payload;
+    } catch (error) {
+      console.error("Get profile error:", error);
+      throw normalizeError(error, "Failed to load profile");
+    }
+  },
+
+  async updateProfile(profileData) {
+    try {
+      const response = await apiClient.put("/users/profile", profileData);
+      const payload = extractPayload(response.data);
+      return payload.user || payload;
+    } catch (error) {
+      console.error("Update profile error:", error);
+      throw normalizeError(error, "Failed to update profile");
+    }
+  },
 };
 
 export const resourceService = {

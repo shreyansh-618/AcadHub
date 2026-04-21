@@ -279,22 +279,25 @@ export default function ResourceDetailPage() {
 
   const getFileIcon = (type) => {
     const icons = {
-      pdf: "PDF",
-      doc: "DOC",
-      docx: "DOCX",
-      pptx: "PPTX",
-      txt: "TXT",
-      image: "IMG",
+      pdf: "📄",
+      doc: "📝",
+      docx: "📝",
+      pptx: "📊",
+      txt: "📄",
+      image: "🖼️",
     };
-    return icons[type] || "FILE";
+    return icons[type] || "📎";
   };
 
   if (loading) {
     return (
       <div className="page-shell flex items-center justify-center">
-        <div className="text-center">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <div className="inline-block h-12 w-12 animate-spin rounded-full border-b-2 border-slate-500" />
-          <p className="mt-4 text-slate-500">Loading resource...</p>
+          <p className="mt-4 text-base font-semibold text-slate-900">Waking up server...</p>
+          <p className="mt-2 text-sm text-slate-600">
+            This may take a few seconds on the deployed app.
+          </p>
         </div>
       </div>
     );
@@ -311,19 +314,19 @@ export default function ResourceDetailPage() {
           to="/resources"
           className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900"
         >
-          <span aria-hidden="true">?</span>
+          <span aria-hidden="true">←</span>
           Back to Resources
         </Link>
 
         <div className="glass-lg overflow-hidden">
-          <div className="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(217,222,228,0.92),rgba(247,248,249,0.96))] p-8">
+          <div className="border-b border-slate-200 bg-slate-50 p-8">
             <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
               <div className="max-w-3xl">
                 <div className="mb-4 flex items-center gap-3">
-                  <div className="rounded-2xl border border-slate-300 bg-white/85 px-4 py-2 text-sm font-semibold tracking-[0.24em] text-slate-700">
+                  <div className="rounded-2xl border border-slate-300 bg-white/85 px-4 py-2 text-sm font-semibold text-slate-700">
                     {getFileIcon(resource.type)}
                   </div>
-                  <span className="rounded-full border border-slate-300 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+                  <span className="rounded-full border border-slate-300 bg-white/80 px-3 py-1 text-xs font-semibold uppercase text-slate-600">
                     {resource.category}
                   </span>
                 </div>
@@ -342,7 +345,7 @@ export default function ResourceDetailPage() {
                   Uploaded By
                 </p>
                 <div className="mt-3 flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#8b96a6,#697586)] text-sm font-bold text-white">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-500 text-sm font-bold text-white">
                     {resource.uploadedByName?.charAt(0).toUpperCase() || "U"}
                   </div>
                   <div>
@@ -438,7 +441,7 @@ export default function ResourceDetailPage() {
                       AI Summary
                     </p>
                     <h2 className="mt-2 text-2xl font-bold text-slate-900">
-                      Smart document overview
+                      Document summary
                     </h2>
                   </div>
                   <button onClick={handleGenerateSummary} className="btn-outline px-4 py-2 text-sm">
@@ -448,7 +451,7 @@ export default function ResourceDetailPage() {
                 {summaryData?.summary || resource.summary ? (
                   <div className="mt-4 rounded-3xl border border-emerald-200 bg-emerald-50/60 p-5">
                     <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                      AI Generated Answer
+                      Summary
                     </p>
                     <p className="mt-3 text-base leading-7 text-slate-700">
                       {summaryData?.summary || resource.summary}
@@ -471,7 +474,7 @@ export default function ResourceDetailPage() {
                   </div>
                 ) : (
                   <p className="mt-4 text-slate-600">
-                    Generate a cached summary to make this resource easier to review.
+                    Generate a summary if you want a quicker overview before reading the file.
                   </p>
                 )}
               </div>
@@ -483,7 +486,7 @@ export default function ResourceDetailPage() {
                       Tags
                     </p>
                     <h2 className="mt-2 text-xl font-bold text-slate-900">
-                      Improve discoverability
+                      Keep search tags clear
                     </h2>
                   </div>
                   <button
@@ -551,7 +554,7 @@ export default function ResourceDetailPage() {
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">File Preview</h2>
                 <p className="mt-2 text-sm text-slate-600">
-                  Open, inspect, or expand the resource directly in-browser.
+                  Read the file here or open it in a new tab.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -629,9 +632,8 @@ export default function ResourceDetailPage() {
                       Office Preview Unavailable
                     </div>
                     <p className="mx-auto mb-6 max-w-xl text-slate-600">
-                      Office files need a publicly reachable document URL for
-                      embedded preview. Download the file or open it through
-                      your deployed frontend URL for full in-browser preview.
+                      Office files need a public file URL for embedded preview. You can
+                      still download the file or try opening it through your deployed site.
                     </p>
                     <div className="flex flex-wrap justify-center gap-3">
                       <button onClick={handleDownload} className="btn-primary px-4 py-2 text-sm">
@@ -679,10 +681,10 @@ export default function ResourceDetailPage() {
               Ask AI
             </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              Grounded Q&A with citations
+              Ask about this resource
             </h2>
             <p className="mt-2 text-sm text-slate-600">
-              Ask about this resource and review confidence, timing, and chunk-level sources.
+              Ask a question and review the answer with source snippets from this file.
             </p>
           </div>
           <QAInterface resourceId={id} />
