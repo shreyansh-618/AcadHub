@@ -285,11 +285,16 @@ Question:
 ${safeQuestion}`;
 
   const result = await runAiOperation("Chat", async () => {
-    const model = process.env.OPENROUTER_CHAT_MODEL || "google/gemma-2-9b-it:free";
+    const primaryModel =
+      process.env.OPENROUTER_CHAT_MODEL || "google/gemma-2-9b-it:free";
 
+    let lastError = null;
+
+    // Try OpenRouter (Gemma) first
     try {
+      logger.debug(`Attempting OpenRouter with model: ${primaryModel}`);
       const response = await callOpenRouter({
-        model,
+        model: primaryModel,
         messages: [
           {
             role: "system",
@@ -302,22 +307,68 @@ ${safeQuestion}`;
         ],
       });
 
-      if (resolvedChatModelName !== model) {
-        resolvedChatModelName = model;
-        logger.info(`Chat model resolved to ${model}`);
+      if (resolvedChatModelName !== primaryModel) {
+        resolvedChatModelName = primaryModel;
+        logger.info(`Chat model resolved to ${primaryModel} (OpenRouter)`);
       }
 
       return response;
     } catch (error) {
-      console.error("=== Chat ACTUAL ERROR ===");
+      console.error("=== OpenRouter Chat FAILED ===");
       console.error(`Message: ${error.message}`);
       console.error(`Status: ${error.status}`);
-      console.error("========================");
-      throw error;
+      console.error("==============================");
+      logger.warn(`OpenRouter failed, attempting Gemini fallback: ${error.message}`);
+      lastError = error;
+    }
+
+    // Fallback to Gemini
+    try {
+      logger.debug("Falling back to Gemini for chat");
+      const response = await callGemini({
+        version: "v1",
+        model: GEMINI_CHAT_MODEL,
+        action: "generateContent",
+        body: {
+          contents: [
+            {
+              parts: [{ text: systemPrompt }],
+            },
+            {
+              parts: [{ text: userMessage }],
+            },
+          ],
+        },
+      });
+
+      const fallbackModel = `${GEMINI_CHAT_MODEL} (fallback)`;
+      if (resolvedChatModelName !== fallbackModel) {
+        resolvedChatModelName = fallbackModel;
+        logger.info(`Chat model fell back to ${fallbackModel}`);
+      }
+
+      return response;
+    } catch (fallbackError) {
+      console.error("=== Gemini Chat FALLBACK FAILED ===");
+      console.error(`Message: ${fallbackError.message}`);
+      console.error(`Status: ${fallbackError.status}`);
+      console.error(`Primary error was: ${lastError.message}`);
+      console.error("===================================");
+      logger.error(`Both OpenRouter and Gemini failed. Primary: ${lastError.message}, Fallback: ${fallbackError.message}`);
+      throw fallbackError;
     }
   });
 
-  return result?.choices?.[0]?.message?.content || "No response";
+  // Handle response from either provider
+  if (result?.choices?.[0]?.message?.content) {
+    // OpenRouter format
+    return result.choices[0].message.content;
+  } else if (result?.candidates?.[0]?.content?.parts?.[0]?.text) {
+    // Gemini format
+    return result.candidates[0].content.parts[0].text;
+  }
+
+  return "No response";
 };
 
 export const summarizeText = async (text) => {
