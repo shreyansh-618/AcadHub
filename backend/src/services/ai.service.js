@@ -3,9 +3,9 @@ import { logger } from "../config/logger.js";
 export const AI_PROVIDER = "gemini";
 const GEMINI_EMBEDDING_MODEL =
   process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001";
-const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-pro";
+const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-2.0-flash";
 const GEMINI_CHAT_MODEL_FALLBACKS = (
-  process.env.GEMINI_CHAT_MODEL_FALLBACKS || "gemini-pro,gemini-2.0-flash"
+  process.env.GEMINI_CHAT_MODEL_FALLBACKS || "gemini-2.0-flash"
 )
   .split(",")
   .map((value) => value.trim())
@@ -237,11 +237,13 @@ ${safeQuestion}
     const candidateModels = resolvedChatModelName
       ? [resolvedChatModelName, ...getChatModelCandidates()]
       : getChatModelCandidates();
-    const apiVersions = ["v1", "v1beta"];
     let lastError = null;
 
-    // Try each model on both API versions
+    // Try each model, prioritizing v1beta for newer models
     for (const modelName of [...new Set(candidateModels)]) {
+      // Newer models like gemini-2.0-flash are only on v1beta
+      const apiVersions = modelName.includes("2.0") ? ["v1beta", "v1"] : ["v1", "v1beta"];
+      
       for (const version of apiVersions) {
         try {
           const response = await callGemini({
@@ -259,7 +261,9 @@ ${safeQuestion}
 
           if (resolvedChatModelName !== modelName) {
             resolvedChatModelName = modelName;
-            logger.info(`Gemini chat model resolved to ${modelName} on ${version}`);
+            logger.info(
+              `Gemini chat model resolved to ${modelName} on ${version}`,
+            );
           }
 
           return response;
