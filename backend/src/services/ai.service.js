@@ -1,13 +1,12 @@
 import { logger } from "../config/logger.js";
 
-export const AI_PROVIDER = "gemini"; // Gemini v1beta (free tier)
+export const AI_PROVIDER = "gemini"; // Gemini 2.5 Flash (latest, fastest)
 const GEMINI_EMBEDDING_MODEL =
   process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001";
-const GEMINI_CHAT_MODEL =
-  process.env.GEMINI_CHAT_MODEL || "gemini-1.5-flash";
+const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-2.5-flash";
 
 export const EMBEDDING_DIMENSIONS = Number.parseInt(
-  process.env.EMBEDDING_DIMENSIONS || "3072",
+  process.env.EMBEDDING_DIMENSIONS || "768",
   10,
 );
 export const EMBEDDING_MODEL_NAME = GEMINI_EMBEDDING_MODEL;
@@ -207,7 +206,7 @@ Question:
 ${safeQuestion}`;
 
   const result = await runAiOperation("Chat", async () => {
-    logger.debug(`Chat: Calling Gemini v1beta with model ${GEMINI_CHAT_MODEL}`);
+    logger.debug(`Chat: Calling ${GEMINI_CHAT_MODEL}`);
 
     const response = await callGemini({
       version: "v1beta",
@@ -229,11 +228,11 @@ ${safeQuestion}`;
 
     if (resolvedChatModelName !== GEMINI_CHAT_MODEL) {
       resolvedChatModelName = GEMINI_CHAT_MODEL;
-      logger.info(`Chat: Using ${GEMINI_CHAT_MODEL} (Gemini v1beta)`);
+      logger.info(`Chat: Using ${GEMINI_CHAT_MODEL} (Gemini 2.5 Flash)`);
     }
 
     return response;
-  });
+  })
 
   return result?.candidates?.[0]?.content?.parts?.[0]?.text || "No response";
 };
