@@ -23,7 +23,9 @@ export default function ResourceDetailPage() {
     const fetchResource = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${SERVER_BASE_URL}/api/v1/resources/${id}`);
+        const response = await fetch(
+          `${SERVER_BASE_URL}/api/v1/resources/${id}`,
+        );
         const data = await response.json();
 
         if (response.ok && data.data?.resource) {
@@ -119,7 +121,9 @@ export default function ResourceDetailPage() {
       if (response.ok) {
         setLiked(!liked);
         setLikesCount(data.data?.liked ? likesCount + 1 : likesCount - 1);
-        toast.success(data.data?.liked ? "Resource liked!" : "Resource unliked");
+        toast.success(
+          data.data?.liked ? "Resource liked!" : "Resource unliked",
+        );
       } else {
         toast.error(data.message || "Failed to like resource");
       }
@@ -163,7 +167,9 @@ export default function ResourceDetailPage() {
 
       setSummaryData(data.data || null);
       setResource((current) =>
-        current ? { ...current, summary: data.data?.summary || current.summary } : current,
+        current
+          ? { ...current, summary: data.data?.summary || current.summary }
+          : current,
       );
       toast.success("Summary generated");
     } catch (error) {
@@ -185,14 +191,17 @@ export default function ResourceDetailPage() {
         .filter(Boolean)
         .map((name) => ({ name, confidence: 1 }));
 
-      const response = await fetch(`${SERVER_BASE_URL}/api/v1/resources/${id}/tags`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${SERVER_BASE_URL}/api/v1/resources/${id}/tags`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ tags }),
         },
-        body: JSON.stringify({ tags }),
-      });
+      );
       const data = await response.json();
 
       if (!response.ok) {
@@ -200,7 +209,9 @@ export default function ResourceDetailPage() {
       }
 
       setResource((current) =>
-        current ? { ...current, tags: data.data?.tags || current.tags } : current,
+        current
+          ? { ...current, tags: data.data?.tags || current.tags }
+          : current,
       );
       setEditingTags(false);
       toast.success("Tags updated");
@@ -250,12 +261,15 @@ export default function ResourceDetailPage() {
     const officeTypes = ["doc", "docx", "pptx", "xls", "xlsx"];
     return (
       resource &&
-      (nativeTypes.includes(resource.type) || officeTypes.includes(resource.type))
+      (nativeTypes.includes(resource.type) ||
+        officeTypes.includes(resource.type))
     );
   };
 
   const isOfficeType = () => {
-    return resource && ["doc", "docx", "pptx", "xls", "xlsx"].includes(resource.type);
+    return (
+      resource && ["doc", "docx", "pptx", "xls", "xlsx"].includes(resource.type)
+    );
   };
 
   const canUseGoogleViewer = /^https?:\/\//i.test(SERVER_BASE_URL);
@@ -294,7 +308,9 @@ export default function ResourceDetailPage() {
       <div className="page-shell flex items-center justify-center">
         <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <div className="inline-block h-12 w-12 animate-spin rounded-full border-b-2 border-slate-500" />
-          <p className="mt-4 text-base font-semibold text-slate-900">Waking up server...</p>
+          <p className="mt-4 text-base font-semibold text-slate-900">
+            Waking up server...
+          </p>
           <p className="mt-2 text-sm text-slate-600">
             This may take a few seconds on the deployed app.
           </p>
@@ -444,8 +460,15 @@ export default function ResourceDetailPage() {
                       Document summary
                     </h2>
                   </div>
-                  <button onClick={handleGenerateSummary} className="btn-outline px-4 py-2 text-sm">
-                    {summaryLoading ? "Generating..." : summaryData?.summary ? "Refresh Summary" : "Generate Summary"}
+                  <button
+                    onClick={handleGenerateSummary}
+                    className="btn-outline px-4 py-2 text-sm"
+                  >
+                    {summaryLoading
+                      ? "Generating..."
+                      : summaryData?.summary
+                        ? "Refresh Summary"
+                        : "Generate Summary"}
                   </button>
                 </div>
                 {summaryData?.summary || resource.summary ? (
@@ -458,23 +481,28 @@ export default function ResourceDetailPage() {
                     </p>
                     {summaryData?.keyPoints?.length ? (
                       <div className="mt-4">
-                        <p className="text-sm font-semibold text-slate-900">Key points</p>
+                        <p className="text-sm font-semibold text-slate-900">
+                          Key points
+                        </p>
                         <div className="mt-2 flex flex-wrap gap-2">
-                          {summaryData.keyPoints.slice(0, 5).map((point, index) => (
-                            <span
-                              key={`point-${index}`}
-                              className="rounded-full bg-white px-3 py-2 text-sm text-slate-700 border border-emerald-100"
-                            >
-                              {point}
-                            </span>
-                          ))}
+                          {summaryData.keyPoints
+                            .slice(0, 5)
+                            .map((point, index) => (
+                              <span
+                                key={`point-${index}`}
+                                className="rounded-full bg-white px-3 py-2 text-sm text-slate-700 border border-emerald-100"
+                              >
+                                {point}
+                              </span>
+                            ))}
                         </div>
                       </div>
                     ) : null}
                   </div>
                 ) : (
                   <p className="mt-4 text-slate-600">
-                    Generate a summary if you want a quicker overview before reading the file.
+                    Generate a summary if you want a quicker overview before
+                    reading the file.
                   </p>
                 )}
               </div>
@@ -517,7 +545,10 @@ export default function ResourceDetailPage() {
                       className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none"
                       placeholder="Enter comma-separated tags"
                     />
-                    <button onClick={handleSaveTags} className="btn-primary mt-3 px-4 py-2 text-sm">
+                    <button
+                      onClick={handleSaveTags}
+                      className="btn-primary mt-3 px-4 py-2 text-sm"
+                    >
                       Save Tags
                     </button>
                   </div>
@@ -526,22 +557,13 @@ export default function ResourceDetailPage() {
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                onClick={handleOpen}
-                className="btn-primary flex-1"
-              >
+              <button onClick={handleOpen} className="btn-primary flex-1">
                 Open File
               </button>
-              <button
-                onClick={handleDownload}
-                className="btn-outline flex-1"
-              >
+              <button onClick={handleDownload} className="btn-outline flex-1">
                 Download File
               </button>
-              <button
-                onClick={handleLike}
-                className="btn-secondary"
-              >
+              <button onClick={handleLike} className="btn-secondary">
                 {liked ? "Liked" : "Like"}
               </button>
             </div>
@@ -552,7 +574,9 @@ export default function ResourceDetailPage() {
           <div className="glass-lg mt-8 p-8">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">File Preview</h2>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  File Preview
+                </h2>
                 <p className="mt-2 text-sm text-slate-600">
                   Read the file here or open it in a new tab.
                 </p>
@@ -632,11 +656,15 @@ export default function ResourceDetailPage() {
                       Office Preview Unavailable
                     </div>
                     <p className="mx-auto mb-6 max-w-xl text-slate-600">
-                      Office files need a public file URL for embedded preview. You can
-                      still download the file or try opening it through your deployed site.
+                      Office files need a public file URL for embedded preview.
+                      You can still download the file or try opening it through
+                      your deployed site.
                     </p>
                     <div className="flex flex-wrap justify-center gap-3">
-                      <button onClick={handleDownload} className="btn-primary px-4 py-2 text-sm">
+                      <button
+                        onClick={handleDownload}
+                        className="btn-primary px-4 py-2 text-sm"
+                      >
                         Download
                       </button>
                       <a
@@ -665,8 +693,9 @@ export default function ResourceDetailPage() {
                 Download required for this file type
               </h3>
               <p className="mx-auto mb-6 max-w-xl text-slate-600">
-                This file type ({resource.type.toUpperCase()}) cannot be previewed
-                directly in the browser yet. Download it to view the full content.
+                This file type ({resource.type.toUpperCase()}) cannot be
+                previewed directly in the browser yet. Download it to view the
+                full content.
               </p>
               <button onClick={handleDownload} className="btn-primary">
                 Download to View
@@ -684,7 +713,8 @@ export default function ResourceDetailPage() {
               Ask about this resource
             </h2>
             <p className="mt-2 text-sm text-slate-600">
-              Ask a question and review the answer with source snippets from this file.
+              Ask a question and review the answer with source snippets from
+              this file.
             </p>
           </div>
           <QAInterface resourceId={id} />
@@ -693,4 +723,3 @@ export default function ResourceDetailPage() {
     </div>
   );
 }
-

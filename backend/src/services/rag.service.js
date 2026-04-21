@@ -25,13 +25,40 @@ const buildFallbackResult = (processingTime = 0) => ({
 });
 
 const STOP_WORDS = new Set([
-  "the", "and", "for", "with", "that", "this", "from", "have", "what", "when",
-  "where", "which", "about", "into", "your", "their", "there", "explain", "tell",
-  "please", "would", "could", "should", "using", "used", "into", "than", "them",
+  "the",
+  "and",
+  "for",
+  "with",
+  "that",
+  "this",
+  "from",
+  "have",
+  "what",
+  "when",
+  "where",
+  "which",
+  "about",
+  "into",
+  "your",
+  "their",
+  "there",
+  "explain",
+  "tell",
+  "please",
+  "would",
+  "could",
+  "should",
+  "using",
+  "used",
+  "into",
+  "than",
+  "them",
 ]);
 
 const buildSnippet = (content, terms) => {
-  const safeContent = String(content || "").replace(/\s+/g, " ").trim();
+  const safeContent = String(content || "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!safeContent) {
     return "";
   }
@@ -74,12 +101,20 @@ const scoreLexicalMatch = (resource, terms) => {
   return score;
 };
 
-const buildLexicalFallback = async ({ question, resourceIds = [], processingTime = 0 }) => {
-  const terms = [...new Set(
-    String(question || "")
-      .toLowerCase()
-      .match(/[a-z0-9]{3,}/g) || [],
-  )].filter((term) => !STOP_WORDS.has(term)).slice(0, 8);
+const buildLexicalFallback = async ({
+  question,
+  resourceIds = [],
+  processingTime = 0,
+}) => {
+  const terms = [
+    ...new Set(
+      String(question || "")
+        .toLowerCase()
+        .match(/[a-z0-9]{3,}/g) || [],
+    ),
+  ]
+    .filter((term) => !STOP_WORDS.has(term))
+    .slice(0, 8);
 
   const resourceFilter =
     resourceIds.length > 0
@@ -121,13 +156,15 @@ const buildLexicalFallback = async ({ question, resourceIds = [], processingTime
 
   const answerLines = [
     "AI is temporarily unavailable, but these matching document excerpts may help:",
-    ...sources.map((source, index) => `${index + 1}. ${source.title}: ${source.snippet}`),
+    ...sources.map(
+      (source, index) => `${index + 1}. ${source.title}: ${source.snippet}`,
+    ),
   ];
 
   return {
     answer: answerLines.join("\n"),
     sources,
-    confidence: Math.min(1, (sources[0]?.score || 0)),
+    confidence: Math.min(1, sources[0]?.score || 0),
     processingTime,
     tokensUsed: 0,
     answerMode: "fallback_context",
@@ -175,11 +212,15 @@ export const answerQuestion = async ({ question, resourceIds = [] }) => {
       };
     }
 
-    const docIds = [...new Set(chunkMatches.map((match) => String(match.docId)))];
+    const docIds = [
+      ...new Set(chunkMatches.map((match) => String(match.docId))),
+    ];
     const resources = await Resource.find({ _id: { $in: docIds } })
       .select("title subject category semester")
       .lean();
-    const resourceMap = new Map(resources.map((resource) => [String(resource._id), resource]));
+    const resourceMap = new Map(
+      resources.map((resource) => [String(resource._id), resource]),
+    );
 
     const sources = chunkMatches.map((match) => {
       const resource = resourceMap.get(String(match.docId));
@@ -216,6 +257,16 @@ export const answerQuestion = async ({ question, resourceIds = [] }) => {
       sourceCount: sources.length,
     };
   } catch (error) {
+    // ALWAYS log the actual error first
+    logger.error("RAG answerQuestion ERROR DETAILS:", {
+      message: error.message,
+      status: error.status,
+      isAiProviderUnavailable: error instanceof AiProviderUnavailableError,
+      errorName: error.name,
+      details: error.details,
+      stack: error.stack,
+    });
+
     if (error instanceof AiProviderUnavailableError) {
       logger.warn(`RAG fallback mode: ${error.message}`);
       return buildLexicalFallback({

@@ -92,6 +92,13 @@ const runAiOperation = async (operationName, fn) => {
   try {
     return await fn();
   } catch (error) {
+    // ALWAYS log the actual error first
+    logger.error(`${operationName} ACTUAL ERROR:`, {
+      message: error.message,
+      status: error.status,
+      stack: error.stack,
+    });
+
     if (isQuotaOrRateLimitError(error)) {
       providerCooldownUntil = Date.now() + AI_COOLDOWN_MS;
       lastCooldownReason =
@@ -106,24 +113,34 @@ const runAiOperation = async (operationName, fn) => {
 
 const callGemini = async ({ version = "v1", model, action, body }) => {
   const apiKey = getGeminiApiKey();
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/${version}/models/${model}:${action}?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
+  const url = `https://generativelanguage.googleapis.com/${version}/models/${model}:${action}?key=${apiKey}`;
+
+  logger.debug(`Calling Gemini: ${version}/${model}:${action}`);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify(body),
+  });
 
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
+    // EXPOSE THE RAW ERROR
+    logger.error("Gemini RAW ERROR:", {
+      status: response.status,
+      statusText: response.statusText,
+      fullError: JSON.stringify(data, null, 2),
+      url: url.replace(apiKey, "***REDACTED***"),
+    });
+
     const error = new Error(
       data?.error?.message || `Gemini API error (${response.status})`,
     );
     error.status = response.status;
+    error.details = data;
     throw error;
   }
 

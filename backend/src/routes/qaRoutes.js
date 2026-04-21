@@ -105,7 +105,13 @@ const handleAnswer = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    logger.error(`QA answer route failed: ${error.message}`);
+    logger.error(`QA answer route ERROR DETAILS:`, {
+      message: error.message,
+      status: error.status,
+      errorName: error.name,
+      details: error.details,
+      stack: error.stack,
+    });
     return res.json({
       success: true,
       data: {
@@ -245,9 +251,10 @@ router.post("/store-interaction", async (req, res) => {
         : [],
       processingTime: Number(req.body.processingTime) || 0,
       confidence: Number(req.body.confidence) || 0,
-      answerMode: normalizeString(req.body.answerMode, {
-        maxLength: 50,
-      }) || "ai",
+      answerMode:
+        normalizeString(req.body.answerMode, {
+          maxLength: 50,
+        }) || "ai",
     });
 
     return res.json({
