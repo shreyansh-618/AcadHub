@@ -93,7 +93,7 @@ const runAiOperation = async (operationName, fn) => {
     return await fn();
   } catch (error) {
     // ALWAYS log the actual error first - use console to ensure visibility
-    console.error(`=== ${operationName} ACTUAL ERROR ===");
+    console.error(`=== ${operationName} ACTUAL ERROR ===`);
     console.error(`Message: ${error.message}`);
     console.error(`Status: ${error.status}`);
     console.error(`Name: ${error.name}`);
