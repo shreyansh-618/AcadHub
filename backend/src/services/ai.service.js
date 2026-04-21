@@ -3,9 +3,9 @@ import { logger } from "../config/logger.js";
 export const AI_PROVIDER = "gemini";
 const GEMINI_EMBEDDING_MODEL =
   process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001";
-const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-1.5-flash";
+const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-pro";
 const GEMINI_CHAT_MODEL_FALLBACKS = (
-  process.env.GEMINI_CHAT_MODEL_FALLBACKS || "gemini-1.5-flash"
+  process.env.GEMINI_CHAT_MODEL_FALLBACKS || "gemini-pro,gemini-2.0-flash"
 )
   .split(",")
   .map((value) => value.trim())
@@ -100,7 +100,9 @@ const runAiOperation = async (operationName, fn) => {
     console.error(`Details:`, error.details);
     console.error(`Stack:`, error.stack);
     console.error("========================");
-    logger.error(`${operationName} error: ${error.message} (status: ${error.status})`);
+    logger.error(
+      `${operationName} error: ${error.message} (status: ${error.status})`,
+    );
 
     if (isQuotaOrRateLimitError(error)) {
       providerCooldownUntil = Date.now() + AI_COOLDOWN_MS;
@@ -235,38 +237,43 @@ ${safeQuestion}
     const candidateModels = resolvedChatModelName
       ? [resolvedChatModelName, ...getChatModelCandidates()]
       : getChatModelCandidates();
+    const apiVersions = ["v1", "v1beta"];
     let lastError = null;
 
+    // Try each model on both API versions
     for (const modelName of [...new Set(candidateModels)]) {
-      try {
-        const response = await callGemini({
-          version: "v1",
-          model: modelName,
-          action: "generateContent",
-          body: {
-            contents: [
-              {
-                parts: [{ text: prompt }],
-              },
-            ],
-          },
-        });
+      for (const version of apiVersions) {
+        try {
+          const response = await callGemini({
+            version,
+            model: modelName,
+            action: "generateContent",
+            body: {
+              contents: [
+                {
+                  parts: [{ text: prompt }],
+                },
+              ],
+            },
+          });
 
-        if (resolvedChatModelName !== modelName) {
-          resolvedChatModelName = modelName;
-          logger.info(`Gemini chat model resolved to ${modelName}`);
-        }
+          if (resolvedChatModelName !== modelName) {
+            resolvedChatModelName = modelName;
+            logger.info(`Gemini chat model resolved to ${modelName} on ${version}`);
+          }
 
-        return response;
-      } catch (error) {
-        lastError = error;
-        if (!isModelUnavailableError(error)) {
+          return response;
+        } catch (error) {
+          lastError = error;
+          if (!isModelUnavailableError(error)) {
+            // If it's a model not found error, try next version/model
+            logger.debug(
+              `Gemini ${version}/${modelName} unavailable: ${error.message}`,
+            );
+            continue;
+          }
           throw error;
         }
-
-        logger.warn(
-          `Gemini chat model ${modelName} unavailable, trying next fallback`,
-        );
       }
     }
 

@@ -261,7 +261,9 @@ export const answerQuestion = async ({ question, resourceIds = [] }) => {
     console.error("=== RAG answerQuestion ERROR ===");
     console.error(`Message: ${error.message}`);
     console.error(`Status: ${error.status}`);
-    console.error(`Is AiProviderUnavailable: ${error instanceof AiProviderUnavailableError}`);
+    console.error(
+      `Is AiProviderUnavailable: ${error instanceof AiProviderUnavailableError}`,
+    );
     console.error(`Error Name: ${error.name}`);
     console.error(`Details:`, error.details);
     console.error(`Stack:`, error.stack);
