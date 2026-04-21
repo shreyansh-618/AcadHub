@@ -5,8 +5,7 @@ const GEMINI_EMBEDDING_MODEL =
   process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001";
 const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-1.5-flash";
 const GEMINI_CHAT_MODEL_FALLBACKS = (
-  process.env.GEMINI_CHAT_MODEL_FALLBACKS ||
-  "gemini-2.5-flash,gemini-2.0-flash,gemini-1.5-flash,gemini-1.5-pro"
+  process.env.GEMINI_CHAT_MODEL_FALLBACKS || "gemini-1.5-flash"
 )
   .split(",")
   .map((value) => value.trim())
