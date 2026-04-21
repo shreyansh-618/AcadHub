@@ -81,6 +81,11 @@ const isModelUnavailableError = (error) => {
   );
 };
 
+const createTimeout = (ms) =>
+  new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`Operation timeout after ${ms}ms`)), ms),
+  );
+
 const ensureProviderAvailable = () => {
   if (providerCooldownUntil > Date.now()) {
     throw new AiProviderUnavailableError(
@@ -100,14 +105,6 @@ const runAiOperation = async (operationName, fn) => {
   try {
     return await fn();
   } catch (error) {
-    // ALWAYS log the actual error first - use console to ensure visibility
-    console.error(`=== ${operationName} ACTUAL ERROR ===`);
-    console.error(`Message: ${error.message}`);
-    console.error(`Status: ${error.status}`);
-    console.error(`Name: ${error.name}`);
-    console.error(`Details:`, error.details);
-    console.error(`Stack:`, error.stack);
-    console.error("========================");
     logger.error(
       `${operationName} error: ${error.message} (status: ${error.status})`,
     );
@@ -141,20 +138,6 @@ const callGemini = async ({ version = "v1", model, action, body }) => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    // EXPOSE THE RAW ERROR - stringify so it's actually visible in logs
-    const errorContext = {
-      status: response.status,
-      statusText: response.statusText,
-      fullError: data,
-      url: url.replace(apiKey, "***REDACTED***"),
-    };
-    console.error("=== GEMINI RAW ERROR ===");
-    console.error(`Status: ${response.status} ${response.statusText}`);
-    console.error(`URL: ${url.replace(apiKey, "***REDACTED***")}`);
-    console.error(`Full Response:`, JSON.stringify(data, null, 2));
-    console.error("========================");
-    logger.error(`Gemini API error: ${JSON.stringify(errorContext)}`);
-
     const error = new Error(
       data?.error?.message || `Gemini API error (${response.status})`,
     );
@@ -187,19 +170,6 @@ const callOpenRouter = async ({ model, messages }) => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const errorContext = {
-      status: response.status,
-      statusText: response.statusText,
-      fullError: data,
-      url: url,
-    };
-    console.error("=== OPENROUTER RAW ERROR ===");
-    console.error(`Status: ${response.status} ${response.statusText}`);
-    console.error(`URL: ${url}`);
-    console.error(`Full Response:`, JSON.stringify(data, null, 2));
-    console.error("============================");
-    logger.error(`OpenRouter API error: ${JSON.stringify(errorContext)}`);
-
     const error = new Error(
       data?.error?.message || `OpenRouter API error (${response.status})`,
     );
@@ -290,10 +260,9 @@ ${safeQuestion}`;
 
     let lastError = null;
 
-    // Try OpenRouter (Gemma) first
+    // Try OpenRouter (Gemma) first with 5s timeout
     try {
-      logger.debug(`Attempting OpenRouter with model: ${primaryModel}`);
-      const response = await callOpenRouter({
+      const openRouterCall = callOpenRouter({
         model: primaryModel,
         messages: [
           {
@@ -307,24 +276,26 @@ ${safeQuestion}`;
         ],
       });
 
+      const response = await Promise.race([
+        openRouterCall,
+        createTimeout(5000),
+      ]);
+
       if (resolvedChatModelName !== primaryModel) {
         resolvedChatModelName = primaryModel;
-        logger.info(`Chat model resolved to ${primaryModel} (OpenRouter)`);
+        logger.info(`Chat: Using ${primaryModel} (OpenRouter)`);
       }
 
       return response;
     } catch (error) {
-      console.error("=== OpenRouter Chat FAILED ===");
-      console.error(`Message: ${error.message}`);
-      console.error(`Status: ${error.status}`);
-      console.error("==============================");
-      logger.warn(`OpenRouter failed, attempting Gemini fallback: ${error.message}`);
+      logger.warn(
+        `OpenRouter failed (${error.status || error.message}), trying Gemini`,
+      );
       lastError = error;
     }
 
     // Fallback to Gemini
     try {
-      logger.debug("Falling back to Gemini for chat");
       const response = await callGemini({
         version: "v1",
         model: GEMINI_CHAT_MODEL,
@@ -344,17 +315,14 @@ ${safeQuestion}`;
       const fallbackModel = `${GEMINI_CHAT_MODEL} (fallback)`;
       if (resolvedChatModelName !== fallbackModel) {
         resolvedChatModelName = fallbackModel;
-        logger.info(`Chat model fell back to ${fallbackModel}`);
+        logger.info(`Chat: Fell back to ${fallbackModel}`);
       }
 
       return response;
     } catch (fallbackError) {
-      console.error("=== Gemini Chat FALLBACK FAILED ===");
-      console.error(`Message: ${fallbackError.message}`);
-      console.error(`Status: ${fallbackError.status}`);
-      console.error(`Primary error was: ${lastError.message}`);
-      console.error("===================================");
-      logger.error(`Both OpenRouter and Gemini failed. Primary: ${lastError.message}, Fallback: ${fallbackError.message}`);
+      logger.error(
+        `Both providers failed. Primary: ${lastError?.message}, Fallback: ${fallbackError.message}`,
+      );
       throw fallbackError;
     }
   });
