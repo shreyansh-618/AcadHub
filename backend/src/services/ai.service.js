@@ -54,6 +54,14 @@ const getGeminiApiKey = () => {
   return apiKey;
 };
 
+const getOpenRouterApiKey = () => {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENROUTER_API_KEY is not configured");
+  }
+  return apiKey;
+};
+
 const isQuotaOrRateLimitError = (error) => {
   const message = String(error?.message || "").toLowerCase();
   return (
@@ -158,6 +166,51 @@ const callGemini = async ({ version = "v1", model, action, body }) => {
   return data;
 };
 
+const callOpenRouter = async ({ model, messages }) => {
+  const apiKey = getOpenRouterApiKey();
+  const url = "https://openrouter.ai/api/v1/chat/completions";
+
+  logger.debug(`Calling OpenRouter: ${model}`);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const errorContext = {
+      status: response.status,
+      statusText: response.statusText,
+      fullError: data,
+      url: url,
+    };
+    console.error("=== OPENROUTER RAW ERROR ===");
+    console.error(`Status: ${response.status} ${response.statusText}`);
+    console.error(`URL: ${url}`);
+    console.error(`Full Response:`, JSON.stringify(data, null, 2));
+    console.error("============================");
+    logger.error(`OpenRouter API error: ${JSON.stringify(errorContext)}`);
+
+    const error = new Error(
+      data?.error?.message || `OpenRouter API error (${response.status})`,
+    );
+    error.status = response.status;
+    error.details = data;
+    throw error;
+  }
+
+  return data;
+};
+
 const cleanJsonFence = (value = "") =>
   String(value)
     .replace(/^```json\s*/i, "")
@@ -222,73 +275,49 @@ export const generateAnswer = async (context, question) => {
     throw new Error("Question required");
   }
 
-  const prompt = `
-You are an AI assistant. Answer ONLY using the provided context.
-If the answer is not in the context, say "I could not find relevant information."
+  const systemPrompt = `You are an AI assistant. Answer ONLY using the provided context.
+If the answer is not in the context, say "I could not find relevant information."`;
 
-Context:
+  const userMessage = `Context:
 ${safeContext || "No relevant context"}
 
 Question:
-${safeQuestion}
-`;
+${safeQuestion}`;
 
   const result = await runAiOperation("Chat", async () => {
-    const candidateModels = resolvedChatModelName
-      ? [resolvedChatModelName, ...getChatModelCandidates()]
-      : getChatModelCandidates();
-    let lastError = null;
+    const model = process.env.OPENROUTER_CHAT_MODEL || "google/gemma-2-9b-it:free";
 
-    // Try each model, prioritizing v1beta for newer models
-    for (const modelName of [...new Set(candidateModels)]) {
-      // Newer models like gemini-2.0-flash are only on v1beta
-      const apiVersions = modelName.includes("2.0") ? ["v1beta", "v1"] : ["v1", "v1beta"];
-      
-      for (const version of apiVersions) {
-        try {
-          const response = await callGemini({
-            version,
-            model: modelName,
-            action: "generateContent",
-            body: {
-              contents: [
-                {
-                  parts: [{ text: prompt }],
-                },
-              ],
-            },
-          });
+    try {
+      const response = await callOpenRouter({
+        model,
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt,
+          },
+          {
+            role: "user",
+            content: userMessage,
+          },
+        ],
+      });
 
-          if (resolvedChatModelName !== modelName) {
-            resolvedChatModelName = modelName;
-            logger.info(
-              `Gemini chat model resolved to ${modelName} on ${version}`,
-            );
-          }
-
-          return response;
-        } catch (error) {
-          lastError = error;
-          if (!isModelUnavailableError(error)) {
-            // If it's a model not found error, try next version/model
-            logger.debug(
-              `Gemini ${version}/${modelName} unavailable: ${error.message}`,
-            );
-            continue;
-          }
-          throw error;
-        }
+      if (resolvedChatModelName !== model) {
+        resolvedChatModelName = model;
+        logger.info(`Chat model resolved to ${model}`);
       }
-    }
 
-    throw lastError || new Error("No supported Gemini chat model was found");
+      return response;
+    } catch (error) {
+      console.error("=== Chat ACTUAL ERROR ===");
+      console.error(`Message: ${error.message}`);
+      console.error(`Status: ${error.status}`);
+      console.error("========================");
+      throw error;
+    }
   });
 
-  return (
-    result?.candidates?.[0]?.content?.parts
-      ?.map((part) => part?.text || "")
-      .join("") || "No response"
-  );
+  return result?.choices?.[0]?.message?.content || "No response";
 };
 
 export const summarizeText = async (text) => {
