@@ -240,7 +240,7 @@ ${safeQuestion}
     for (const modelName of [...new Set(candidateModels)]) {
       try {
         const response = await callGemini({
-          version: "v1beta",
+          version: "v1",
           model: modelName,
           action: "generateContent",
           body: {
