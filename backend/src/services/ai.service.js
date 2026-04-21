@@ -255,88 +255,38 @@ Question:
 ${safeQuestion}`;
 
   const result = await runAiOperation("Chat", async () => {
-    const primaryModel =
+    const model =
       process.env.OPENROUTER_CHAT_MODEL || "google/gemma-2-9b-it:free";
 
-    let lastError = null;
-
-    // Try OpenRouter (Gemma) first with 5s timeout
-    try {
-      const openRouterCall = callOpenRouter({
-        model: primaryModel,
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt,
-          },
-          {
-            role: "user",
-            content: userMessage,
-          },
-        ],
-      });
-
-      const response = await Promise.race([
-        openRouterCall,
-        createTimeout(5000),
-      ]);
-
-      if (resolvedChatModelName !== primaryModel) {
-        resolvedChatModelName = primaryModel;
-        logger.info(`Chat: Using ${primaryModel} (OpenRouter)`);
-      }
-
-      return response;
-    } catch (error) {
-      logger.warn(
-        `OpenRouter failed (${error.status || error.message}), trying Gemini`,
-      );
-      lastError = error;
-    }
-
-    // Fallback to Gemini
-    try {
-      const response = await callGemini({
-        version: "v1",
-        model: GEMINI_CHAT_MODEL,
-        action: "generateContent",
-        body: {
-          contents: [
-            {
-              parts: [{ text: systemPrompt }],
-            },
-            {
-              parts: [{ text: userMessage }],
-            },
-          ],
+    // OpenRouter (Gemma) with 5s timeout - no fallback
+    const openRouterCall = callOpenRouter({
+      model,
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt,
         },
-      });
+        {
+          role: "user",
+          content: userMessage,
+        },
+      ],
+    });
 
-      const fallbackModel = `${GEMINI_CHAT_MODEL} (fallback)`;
-      if (resolvedChatModelName !== fallbackModel) {
-        resolvedChatModelName = fallbackModel;
-        logger.info(`Chat: Fell back to ${fallbackModel}`);
-      }
+    const response = await Promise.race([
+      openRouterCall,
+      createTimeout(5000),
+    ]);
 
-      return response;
-    } catch (fallbackError) {
-      logger.error(
-        `Both providers failed. Primary: ${lastError?.message}, Fallback: ${fallbackError.message}`,
-      );
-      throw fallbackError;
+    if (resolvedChatModelName !== model) {
+      resolvedChatModelName = model;
+      logger.info(`Chat: Using ${model} (OpenRouter)`);
     }
+
+    return response;
   });
 
-  // Handle response from either provider
-  if (result?.choices?.[0]?.message?.content) {
-    // OpenRouter format
-    return result.choices[0].message.content;
-  } else if (result?.candidates?.[0]?.content?.parts?.[0]?.text) {
-    // Gemini format
-    return result.candidates[0].content.parts[0].text;
-  }
-
-  return "No response";
+  return result?.choices?.[0]?.message?.content || "No response";
 };
 
 export const summarizeText = async (text) => {
