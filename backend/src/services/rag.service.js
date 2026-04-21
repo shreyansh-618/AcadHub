@@ -257,15 +257,16 @@ export const answerQuestion = async ({ question, resourceIds = [] }) => {
       sourceCount: sources.length,
     };
   } catch (error) {
-    // ALWAYS log the actual error first
-    logger.error("RAG answerQuestion ERROR DETAILS:", {
-      message: error.message,
-      status: error.status,
-      isAiProviderUnavailable: error instanceof AiProviderUnavailableError,
-      errorName: error.name,
-      details: error.details,
-      stack: error.stack,
-    });
+    // ALWAYS log the actual error first - use console for guaranteed visibility
+    console.error("=== RAG answerQuestion ERROR ===");
+    console.error(`Message: ${error.message}`);
+    console.error(`Status: ${error.status}`);
+    console.error(`Is AiProviderUnavailable: ${error instanceof AiProviderUnavailableError}`);
+    console.error(`Error Name: ${error.name}`);
+    console.error(`Details:`, error.details);
+    console.error(`Stack:`, error.stack);
+    console.error("================================");
+    logger.error(`RAG error: ${error.message} (status: ${error.status})`);
 
     if (error instanceof AiProviderUnavailableError) {
       logger.warn(`RAG fallback mode: ${error.message}`);

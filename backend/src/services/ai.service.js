@@ -92,12 +92,15 @@ const runAiOperation = async (operationName, fn) => {
   try {
     return await fn();
   } catch (error) {
-    // ALWAYS log the actual error first
-    logger.error(`${operationName} ACTUAL ERROR:`, {
-      message: error.message,
-      status: error.status,
-      stack: error.stack,
-    });
+    // ALWAYS log the actual error first - use console to ensure visibility
+    console.error(`=== ${operationName} ACTUAL ERROR ===");
+    console.error(`Message: ${error.message}`);
+    console.error(`Status: ${error.status}`);
+    console.error(`Name: ${error.name}`);
+    console.error(`Details:`, error.details);
+    console.error(`Stack:`, error.stack);
+    console.error("========================");
+    logger.error(`${operationName} error: ${error.message} (status: ${error.status})`);
 
     if (isQuotaOrRateLimitError(error)) {
       providerCooldownUntil = Date.now() + AI_COOLDOWN_MS;
@@ -128,13 +131,19 @@ const callGemini = async ({ version = "v1", model, action, body }) => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    // EXPOSE THE RAW ERROR
-    logger.error("Gemini RAW ERROR:", {
+    // EXPOSE THE RAW ERROR - stringify so it's actually visible in logs
+    const errorContext = {
       status: response.status,
       statusText: response.statusText,
-      fullError: JSON.stringify(data, null, 2),
+      fullError: data,
       url: url.replace(apiKey, "***REDACTED***"),
-    });
+    };
+    console.error("=== GEMINI RAW ERROR ===");
+    console.error(`Status: ${response.status} ${response.statusText}`);
+    console.error(`URL: ${url.replace(apiKey, "***REDACTED***")}`);
+    console.error(`Full Response:`, JSON.stringify(data, null, 2));
+    console.error("========================");
+    logger.error(`Gemini API error: ${JSON.stringify(errorContext)}`);
 
     const error = new Error(
       data?.error?.message || `Gemini API error (${response.status})`,
