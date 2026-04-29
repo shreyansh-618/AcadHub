@@ -11,37 +11,72 @@ import {
 import { initializeFirebaseAuth, getFirebaseAuthInstance } from "./firebase";
 import { rateLimiter } from "./rateLimiter";
 
-function getApiBaseUrl() {
-  if (process.env.EXPO_PUBLIC_API_BASE_URL) {
-    const configuredUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
-
-    if (Platform.OS === "android") {
-      return configuredUrl
-        .replace("localhost", "10.0.2.2")
-        .replace("127.0.0.1", "10.0.2.2");
-    }
-
-    return configuredUrl;
-  }
-
-  if (Platform.OS === "android") {
-    return "http://10.0.2.2:3000/api/v1";
-  }
-
+function getExpoDevHost() {
   const hostUri =
     Constants.expoConfig?.hostUri ||
     Constants.manifest2?.extra?.expoClient?.hostUri ||
     Constants.linkingUri;
 
-  if (hostUri && typeof hostUri === "string") {
-    const normalizedHost = hostUri
-      .replace(/^[a-z]+:\/\//i, "")
-      .split("/")[0]
-      .split(":")[0];
+  if (!hostUri || typeof hostUri !== "string") {
+    return null;
+  }
 
-    if (normalizedHost) {
-      return `http://${normalizedHost}:3000/api/v1`;
+  const normalizedHost = hostUri
+    .replace(/^[a-z]+:\/\//i, "")
+    .split("/")[0]
+    .split(":")[0];
+
+  if (
+    normalizedHost &&
+    normalizedHost !== "localhost" &&
+    normalizedHost !== "127.0.0.1"
+  ) {
+    return normalizedHost;
+  }
+
+  return null;
+}
+
+function replaceLocalhost(url, host) {
+  return url.replace(/\/\/(localhost|127\.0\.0\.1)(?=[:/]|$)/i, `//${host}`);
+}
+
+function getApiBaseUrl() {
+  if (process.env.EXPO_PUBLIC_API_BASE_URL) {
+    const configuredUrls = process.env.EXPO_PUBLIC_API_BASE_URL
+      .split(",")
+      .map((url) => url.trim())
+      .filter(Boolean);
+    const localUrl = configuredUrls.find((url) =>
+      /\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(url),
+    );
+    const configuredUrl = (__DEV__ && localUrl) || configuredUrls[0];
+
+    if (!configuredUrl) {
+      return "http://localhost:3000/api/v1";
     }
+
+    if (Platform.OS === "android") {
+      const isLocalUrl = /\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(
+        configuredUrl,
+      );
+
+      if (isLocalUrl) {
+        return replaceLocalhost(configuredUrl, getExpoDevHost() || "10.0.2.2");
+      }
+    }
+
+    return configuredUrl;
+  }
+
+  const expoDevHost = getExpoDevHost();
+
+  if (expoDevHost) {
+    return `http://${expoDevHost}:3000/api/v1`;
+  }
+
+  if (Platform.OS === "android") {
+    return "http://10.0.2.2:3000/api/v1";
   }
 
   return "http://localhost:3000/api/v1";

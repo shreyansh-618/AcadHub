@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
+import {
+  ArrowLeft,
+  BookOpen,
+  Download,
+  FileText,
+  Heart,
+} from "lucide-react";
 import { authService } from "@/services/auth";
 import QAInterface from "@/components/QAInterface";
 import { SERVER_BASE_URL } from "@/services/urlConfig";
@@ -291,18 +298,16 @@ export default function ResourceDetailPage() {
     });
   };
 
-  const getFileIcon = (type) => {
-    const icons = {
-      pdf: "📄",
-      doc: "📝",
-      docx: "📝",
-      pptx: "📊",
-      txt: "📄",
-      image: "🖼️",
-    };
-    return icons[type] || "📎";
-  };
+  const getFileIcon = () => <FileText size={22} />;
 
+  const getSuggestedQuestions = () => [
+    `Summarize ${resource.title} for revision.`,
+    `Explain ${resource.subject || "this topic"} in simple words.`,
+    "What are the most important exam points?",
+    "Create five quick practice questions from this document.",
+    "What are the key definitions and terms here?",
+    "What should I revise first from this material?",
+  ];
   if (loading) {
     return (
       <div className="page-shell flex items-center justify-center">
@@ -325,28 +330,28 @@ export default function ResourceDetailPage() {
 
   return (
     <div className="page-shell">
-      <div className="container-max max-w-5xl">
+      <div className="container-max">
         <Link
           to="/resources"
-          className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900"
+          className="mb-5 inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950"
         >
-          <span aria-hidden="true">←</span>
+          <ArrowLeft size={16} />
           Back to Resources
         </Link>
 
-        <div className="glass-lg overflow-hidden">
-          <div className="border-b border-slate-200 bg-slate-50 p-8">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 bg-slate-50 px-6 py-7 sm:px-8">
             <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
               <div className="max-w-3xl">
                 <div className="mb-4 flex items-center gap-3">
-                  <div className="rounded-2xl border border-slate-300 bg-white/85 px-4 py-2 text-sm font-semibold text-slate-700">
-                    {getFileIcon(resource.type)}
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700">
+                    {getFileIcon()}
                   </div>
                   <span className="rounded-full border border-slate-300 bg-white/80 px-3 py-1 text-xs font-semibold uppercase text-slate-600">
                     {resource.category}
                   </span>
                 </div>
-                <h1 className="mb-3 text-4xl font-bold text-slate-900">
+                <h1 className="mb-3 max-w-4xl text-3xl font-bold text-slate-900 sm:text-4xl">
                   {resource.title}
                 </h1>
                 {resource.description && (
@@ -356,7 +361,7 @@ export default function ResourceDetailPage() {
                 )}
               </div>
 
-              <div className="glass-sm min-w-[220px] p-4">
+              <div className="min-w-[240px] rounded-xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
                   Uploaded By
                 </p>
@@ -379,9 +384,9 @@ export default function ResourceDetailPage() {
             </div>
           </div>
 
-          <div className="p-8">
-            <div className="grid gap-8 md:grid-cols-2">
-              <div className="glass-sm p-5">
+          <div className="p-6 sm:p-8">
+            <div className="grid gap-5 lg:grid-cols-[1fr_1fr_0.85fr]">
+              <div className="rounded-xl border border-slate-200 bg-white p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
                   Document Details
                 </p>
@@ -407,7 +412,7 @@ export default function ResourceDetailPage() {
                 </div>
               </div>
 
-              <div className="glass-sm p-5">
+              <div className="rounded-xl border border-slate-200 bg-white p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
                   File Information
                 </p>
@@ -432,25 +437,27 @@ export default function ResourceDetailPage() {
                   </div>
                 </div>
               </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  Activity
+                </p>
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-slate-50 p-4">
+                    <Download size={18} className="text-slate-500" />
+                    <p className="mt-2 text-2xl font-bold text-slate-900">{resource.downloads || 0}</p>
+                    <p className="text-xs font-semibold text-slate-500">Downloads</p>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 p-4">
+                    <Heart size={18} className="text-slate-500" />
+                    <p className="mt-2 text-2xl font-bold text-slate-900">{likesCount}</p>
+                    <p className="text-xs font-semibold text-slate-500">Likes</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="my-8 grid gap-4 border-y border-slate-200 py-8 sm:grid-cols-2">
-              <div className="glass-sm p-5">
-                <p className="text-sm text-slate-500">Downloads</p>
-                <p className="mt-2 text-3xl font-bold text-slate-900">
-                  {resource.downloads || 0}
-                </p>
-              </div>
-              <div className="glass-sm p-5">
-                <p className="text-sm text-slate-500">Likes</p>
-                <p className="mt-2 text-3xl font-bold text-slate-900">
-                  {likesCount}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
-              <div className="glass-sm p-5">
+            <div className="mt-6 grid gap-6 xl:grid-cols-[1.45fr_0.75fr]">
+              <div className="rounded-xl border border-slate-200 bg-white p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
@@ -472,7 +479,7 @@ export default function ResourceDetailPage() {
                   </button>
                 </div>
                 {summaryData?.summary || resource.summary ? (
-                  <div className="mt-4 rounded-3xl border border-emerald-200 bg-emerald-50/60 p-5">
+                  <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/60 p-5">
                     <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
                       Summary
                     </p>
@@ -507,7 +514,7 @@ export default function ResourceDetailPage() {
                 )}
               </div>
 
-              <div className="glass-sm p-5">
+              <div className="rounded-xl border border-slate-200 bg-white p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
@@ -526,14 +533,16 @@ export default function ResourceDetailPage() {
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {(resource.tags || []).map((tag, index) => (
+                  {(resource.tags || []).length ? (resource.tags || []).map((tag, index) => (
                     <span
                       key={`tag-${index}`}
                       className="rounded-full border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700"
                     >
                       {tag.name || tag}
                     </span>
-                  ))}
+                  )) : (
+                    <p className="text-sm text-slate-500">No tags yet. Add a few to improve discovery.</p>
+                  )}
                 </div>
 
                 {editingTags ? (
@@ -556,14 +565,17 @@ export default function ResourceDetailPage() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button onClick={handleOpen} className="btn-primary flex-1">
+            <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+              <button onClick={handleOpen} className="btn-primary flex-1 gap-2">
+                <BookOpen size={18} />
                 Open File
               </button>
-              <button onClick={handleDownload} className="btn-outline flex-1">
+              <button onClick={handleDownload} className="btn-outline flex-1 gap-2">
+                <Download size={18} />
                 Download File
               </button>
-              <button onClick={handleLike} className="btn-secondary">
+              <button onClick={handleLike} className="btn-secondary gap-2">
+                <Heart size={18} />
                 {liked ? "Liked" : "Like"}
               </button>
             </div>
@@ -717,7 +729,11 @@ export default function ResourceDetailPage() {
               this file.
             </p>
           </div>
-          <QAInterface resourceId={id} />
+          <QAInterface
+            resourceId={id}
+            resource={resource}
+            suggestedQuestions={getSuggestedQuestions()}
+          />
         </div>
       </div>
     </div>

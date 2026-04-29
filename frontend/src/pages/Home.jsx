@@ -1,5 +1,12 @@
 import { Link } from "react-router-dom";
-import { BookOpen, Calendar, FileSearch, MessageSquare, Upload } from "lucide-react";
+import {
+  BarChart3,
+  BookOpen,
+  Calendar,
+  FileSearch,
+  MessageSquare,
+  Upload,
+} from "lucide-react";
 
 const features = [
   {
@@ -31,6 +38,12 @@ const features = [
     description:
       "See workshops, deadlines, and department events without switching to another app.",
     icon: Calendar,
+  },
+  {
+    title: "Review your progress",
+    description:
+      "See viewed documents, saved resources, and study activity so your next session starts faster.",
+    icon: BarChart3,
   },
 ];
 
@@ -68,14 +81,19 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid auto-rows-fr gap-5 md:grid-cols-2 xl:grid-cols-3">
             {features.map(({ title, description, icon: Icon }) => (
-              <div key={title} className="card-interactive">
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+              <div
+                key={title}
+                className="card-interactive flex min-h-[168px] flex-col justify-between"
+              >
+                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
                   <Icon size={20} />
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900">{title}</h3>
-                <p className="mt-3 text-sm text-slate-600">{description}</p>
+                <div className="mt-5">
+                  <h3 className="text-xl font-semibold text-slate-900">{title}</h3>
+                  <p className="mt-3 text-sm text-slate-600">{description}</p>
+                </div>
               </div>
             ))}
           </div>

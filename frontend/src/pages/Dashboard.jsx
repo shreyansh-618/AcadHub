@@ -167,6 +167,9 @@ export default function DashboardPage() {
     }
   };
 
+  const summarizedDocuments = documents
+    .filter((doc) => doc.summary)
+    .slice(0, 4);
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
@@ -323,7 +326,55 @@ export default function DashboardPage() {
                     </p>
                   ) : null}
                   <p className="text-slate-600 text-sm mt-2">
-                    {item.subject} � Semester {item.semester}
+                    {item.subject} • Semester {item.semester}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Document Summaries */}
+        <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-8 mb-8">
+          <div className="flex flex-col gap-2 mb-6">
+            <h2 className="text-2xl font-bold text-slate-900">
+              Document summaries
+            </h2>
+            <p className="text-slate-600">
+              Fast previews from resources that already have AI summaries.
+            </p>
+          </div>
+
+          {summarizedDocuments.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6">
+              <p className="font-semibold text-slate-900">
+                No document summaries yet
+              </p>
+              <p className="mt-2 text-sm text-slate-600">
+                Open a resource and generate a summary to make it appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {summarizedDocuments.map((doc) => (
+                <button
+                  key={`summary-${doc._id}`}
+                  onClick={() => navigate(`/resources/${doc._id}`)}
+                  className="text-left rounded-lg border border-slate-200 bg-slate-50 p-5 transition-all hover:border-blue-300 hover:shadow-md"
+                >
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                      {doc.subject || "General"}
+                    </span>
+                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                      Semester {doc.semester || "N/A"}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-slate-900 line-clamp-2">
+                    {doc.title}
+                  </h3>
+                  <p className="mt-3 text-sm leading-6 text-slate-600 line-clamp-4">
+                    {doc.summary}
                   </p>
                 </button>
               ))}
@@ -373,6 +424,11 @@ export default function DashboardPage() {
                       <p className="text-slate-600 text-sm line-clamp-2">
                         {doc.description || "No description"}
                       </p>
+                      {doc.summary ? (
+                        <p className="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-600 line-clamp-4">
+                          {doc.summary}
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="flex flex-wrap gap-2 mb-4">
@@ -389,15 +445,31 @@ export default function DashboardPage() {
                       <span>{doc.likes} likes</span>
                     </div>
 
-                    <a
-                      href={`${API_ROOT}/resources/${doc._id}/download`}
-                      download
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors inline-block text-center"
-                    >
-                      Download
-                    </a>
+                    <div className="grid grid-cols-1 gap-2">
+                      <button
+                        onClick={() => navigate(`/assistant/${doc._id}`)}
+                        className="w-full rounded-lg bg-blue-600 px-4 py-2 text-center font-semibold text-white transition-colors hover:bg-blue-700"
+                      >
+                        Ask AI
+                      </button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => navigate(`/resources/${doc._id}`)}
+                          className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-center font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                        >
+                          Open
+                        </button>
+                        <a
+                          href={`${API_ROOT}/resources/${doc._id}/download`}
+                          download
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-center font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                        >
+                          Download
+                        </a>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
@@ -411,7 +483,6 @@ export default function DashboardPage() {
             onClick={() => navigate("/discussions")}
             className="bg-white border border-slate-200 shadow-sm p-6 rounded-lg text-left hover:border-blue-300 hover:shadow-md transition-all group"
           >
-            <div className="text-4xl mb-3">💬</div>
             <h3 className="text-xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
               Discussions
             </h3>
@@ -424,7 +495,6 @@ export default function DashboardPage() {
             onClick={() => navigate("/profile")}
             className="bg-white border border-slate-200 shadow-sm p-6 rounded-lg text-left hover:border-blue-300 hover:shadow-md transition-all group"
           >
-            <div className="text-4xl mb-3">👤</div>
             <h3 className="text-xl font-bold text-slate-900 group-hover:text-purple-600 transition-colors">
               My Profile
             </h3>

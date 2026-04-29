@@ -5,7 +5,19 @@ import "./QAInterface.css";
 
 const formatPercent = (value) => `${Math.round((Number(value) || 0) * 100)}%`;
 
-const QAInterface = ({ resourceId = null, onClose = null }) => {
+const defaultSuggestions = [
+  "Summarize this document for revision.",
+  "What are the most important exam points?",
+  "Explain the hardest concept in simple words.",
+  "Create five quick questions from this material.",
+];
+
+const QAInterface = ({
+  resourceId = null,
+  onClose = null,
+  resource = null,
+  suggestedQuestions = [],
+}) => {
   const [question, setQuestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [answer, setAnswer] = useState(null);
@@ -19,6 +31,8 @@ const QAInterface = ({ resourceId = null, onClose = null }) => {
   const scrollRef = useRef(null);
 
   const { user } = useAuthStore();
+  const promptSuggestions =
+    suggestedQuestions.length > 0 ? suggestedQuestions : defaultSuggestions;
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -28,15 +42,15 @@ const QAInterface = ({ resourceId = null, onClose = null }) => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [answer, sources]);
 
-  const handleAsk = async (e) => {
-    e.preventDefault();
+  const askQuestion = async (nextQuestion = question) => {
+    const cleanQuestion = nextQuestion.trim();
 
-    if (!question.trim()) {
+    if (!cleanQuestion) {
       setError("Please enter a question");
       return;
     }
 
-    if (question.length > 500) {
+    if (cleanQuestion.length > 500) {
       setError("Question is too long (max 500 characters)");
       return;
     }
@@ -52,7 +66,7 @@ const QAInterface = ({ resourceId = null, onClose = null }) => {
 
     try {
       const response = await qaService.askQuestion(
-        question.trim(),
+        cleanQuestion,
         resourceId ? [resourceId] : [],
       );
 
@@ -70,7 +84,7 @@ const QAInterface = ({ resourceId = null, onClose = null }) => {
         if (user) {
           qaService.storeInteraction({
             userId: user.id || user.uid,
-            question: question.trim(),
+            question: cleanQuestion,
             answer: response.answer,
             sources: response.sources || [],
             processingTime: response.processingTime || time,
@@ -101,8 +115,27 @@ const QAInterface = ({ resourceId = null, onClose = null }) => {
     }
   };
 
+  const handleAsk = async (e) => {
+    e.preventDefault();
+    await askQuestion();
+  };
+
   return (
     <div className="qa-interface">
+      {resource ? (
+        <div className="qa-context-card">
+          <div>
+            <p className="qa-answer-label">Selected document</p>
+            <h3>{resource.title}</h3>
+            <p>
+              {[resource.subject, resource.category, resource.semester ? `Semester ${resource.semester}` : null]
+                .filter(Boolean)
+                .join(" / ")}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       <form onSubmit={handleAsk} className="qa-form">
         <div className="qa-input-wrapper">
           <textarea
@@ -134,6 +167,27 @@ const QAInterface = ({ resourceId = null, onClose = null }) => {
           </div>
         </div>
       </form>
+
+      {resourceId && !answer && !isLoading ? (
+        <div className="qa-suggestions">
+          <div className="qa-suggestion-header">
+            <p className="qa-answer-label">Recommended questions</p>
+            <span>Tailored for this document</span>
+          </div>
+          <div className="qa-suggestion-grid">
+            {promptSuggestions.slice(0, 6).map((item) => (
+              <button
+                key={item}
+                type="button"
+                className="qa-suggestion"
+                onClick={() => askQuestion(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {error && (
         <div className="qa-error">

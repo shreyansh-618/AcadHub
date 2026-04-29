@@ -232,7 +232,7 @@ ${safeQuestion}`;
     }
 
     return response;
-  })
+  });
 
   return result?.candidates?.[0]?.content?.parts?.[0]?.text || "No response";
 };

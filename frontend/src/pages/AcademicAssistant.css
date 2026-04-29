@@ -17,6 +17,7 @@
 
 .assistant-header,
 .assistant-sidebar,
+.assistant-qa-panel,
 .guide-card {
   background: #fff;
   border: 1px solid #d0d7de;
@@ -53,6 +54,26 @@
 
 .assistant-sidebar {
   padding: 1.5rem;
+}
+
+.assistant-qa-panel {
+  padding: 1.5rem;
+}
+
+.qa-panel-header {
+  margin-bottom: 1.25rem;
+}
+
+.qa-panel-header h2 {
+  margin: 0.35rem 0 0;
+  font-size: 1.45rem;
+  color: #1f2328;
+}
+
+.qa-panel-header p {
+  margin: 0.5rem 0 0;
+  max-width: 760px;
+  color: #475467;
 }
 
 .sidebar-title,
@@ -145,6 +166,7 @@
 
   .assistant-header,
   .assistant-sidebar,
+  .assistant-qa-panel,
   .guide-card {
     padding: 1.25rem;
   }

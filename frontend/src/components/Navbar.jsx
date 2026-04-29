@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Menu, X, LogOut } from "lucide-react";
 import { authService } from "@/services/auth";
 
@@ -21,6 +21,8 @@ export default function Navbar({ user }) {
   const avatarSrc =
     user?.avatar ||
     "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop";
+  const navClass = ({ isActive }) =>
+    `navbar-link ${isActive ? "navbar-link-active" : ""}`;
 
   return (
     <nav className="sticky top-0 z-50 navbar-gradient">
@@ -40,15 +42,15 @@ export default function Navbar({ user }) {
           </Link>
 
           <div className="hidden md:flex items-center gap-1">
-            <Link to="/" className="navbar-link">Home</Link>
-            <Link to="/search" className="navbar-link">Search</Link>
+            <NavLink to="/" className={navClass}>Home</NavLink>
+            <NavLink to="/search" className={navClass}>Search</NavLink>
 
             {user && (
               <>
-                <Link to="/resources" className="navbar-link">Resources</Link>
-                <Link to="/discussions" className="navbar-link">Discussions</Link>
-                <Link to="/events" className="navbar-link">Events</Link>
-                <Link to="/assistant" className="navbar-link">AI Assistant</Link>
+                <NavLink to="/resources" className={navClass}>Resources</NavLink>
+                <NavLink to="/discussions" className={navClass}>Discussions</NavLink>
+                <NavLink to="/events" className={navClass}>Events</NavLink>
+                <NavLink to="/assistant" className={navClass}>AI Assistant</NavLink>
               </>
             )}
           </div>

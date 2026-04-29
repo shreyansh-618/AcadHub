@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import QAInterface from "@/components/QAInterface";
 import { API_ROOT } from "@/services/urlConfig";
 import { useAuthStore } from "@/store/useAuthStore";
 import "./AcademicAssistant.css";
 
 const guidePoints = [
   "Open a resource first if you want an answer based on that file.",
-  "Use the Ask AI section on the resource page instead of asking from a general screen.",
+  "Use the Ask AI section after selecting a resource.",
   "Ask one clear question at a time.",
   "Look at the source snippets before you rely on an answer.",
   "If the answer is too broad, ask a smaller follow-up question.",
@@ -67,10 +68,13 @@ export default function AcademicAssistant() {
         <div className="assistant-main">
           <header className="assistant-header">
             <p className="assistant-eyebrow">AI Assistant</p>
-            <h1 className="header-title">Use AI from inside a resource.</h1>
+            <h1 className="header-title">
+              {resourceId ? "Ask questions about this resource." : "Use AI from inside a resource."}
+            </h1>
             <p className="header-subtitle">
-              The best place to ask a question is on a resource page. That keeps the
-              answer tied to the document you are reading.
+              {resourceId
+                ? "Answers stay tied to the selected document and include source snippets when context is available."
+                : "The best place to ask a question is on a resource page. That keeps the answer tied to the document you are reading."}
             </p>
           </header>
 
@@ -105,13 +109,27 @@ export default function AcademicAssistant() {
                       </span>
                     </div>
                   </div>
-                  <Link to={`/resources/${resourceId}`} className="btn-primary assistant-link">
-                    Open resource and ask there
+                  <Link to={`/resources/${resourceId}`} className="btn-outline assistant-link">
+                    View full resource
                   </Link>
                 </div>
               ) : null}
             </section>
           )}
+
+          {resourceId && resource && !loading && !error ? (
+            <section className="assistant-qa-panel">
+              <div className="qa-panel-header">
+                <p className="assistant-eyebrow">Document Q&A</p>
+                <h2>Ask about {resource.title}</h2>
+                <p>
+                  Ask a focused question and review the answer with retrieved
+                  snippets from this document.
+                </p>
+              </div>
+              <QAInterface resourceId={resourceId} />
+            </section>
+          ) : null}
 
           <section className="guide-content">
             <div className="guide-grid">
@@ -138,7 +156,7 @@ export default function AcademicAssistant() {
               <h2>When to use this tab</h2>
               <p>
                 Use this page as a quick guide. When you are ready to ask something real,
-                go to the resource you want and use the Ask AI section there.
+                choose a resource and use the document Q&A area.
               </p>
               <div className="assistant-actions">
                 <Link to="/resources" className="btn-primary">

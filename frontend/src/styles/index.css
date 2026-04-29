@@ -103,6 +103,10 @@
     box-shadow: var(--shadow-medium);
   }
 
+  .card-interactive {
+    @apply p-5 sm:p-6;
+  }
+
   .navbar,
   .navbar-gradient {
     background: rgba(255, 255, 255, 0.96);
@@ -118,6 +122,11 @@
   .navbar-link:hover {
     background: #eef3f8;
     color: var(--text-strong);
+  }
+
+  .navbar-link-active {
+    background: var(--brand-soft);
+    color: var(--brand-strong);
   }
 
   .btn-primary,
