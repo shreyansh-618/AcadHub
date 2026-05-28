@@ -8,6 +8,7 @@ import { connectDB } from "./config/database.js";
 import { initFirebase } from "./config/firebase.js";
 import { logger } from "./config/logger.js";
 import { authMiddleware } from "./middleware/auth.js";
+import { rejectMongoOperators } from "./middleware/requestSecurity.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import resourceRoutes from "./routes/resourceRoutes.js";
@@ -41,6 +42,8 @@ const configuredOrigins = (process.env.CORS_ORIGIN || "")
   .filter(Boolean);
 let embeddingRetryTimer = null;
 let embeddingRetryJobRunning = false;
+const jsonBodyLimit = process.env.JSON_BODY_LIMIT || "1mb";
+const urlEncodedBodyLimit = process.env.URL_ENCODED_BODY_LIMIT || "1mb";
 
 if (isProduction && configuredOrigins.length === 0) {
   throw new Error("CORS_ORIGIN must be set to your frontend domain(s) in production");
@@ -167,8 +170,9 @@ app.use(
 );
 
 // Body parsing middleware
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(express.json({ limit: jsonBodyLimit }));
+app.use(express.urlencoded({ limit: urlEncodedBodyLimit, extended: true }));
+app.use(rejectMongoOperators);
 
 // Rate limiting middleware
 const limiter = buildRateLimiter({

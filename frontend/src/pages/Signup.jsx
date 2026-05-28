@@ -9,7 +9,6 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState("student");
   const [department, setDepartment] = useState("Computer Science");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -43,7 +42,7 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const result = await authService.signup(name, email, password, role, department);
+      const result = await authService.signup(name, email, password, department);
       if (result?.data?.user) {
         toast.success("Account created successfully");
       }
@@ -57,7 +56,7 @@ export default function SignupPage() {
     if (googleLoading) return;
     setGoogleLoading(true);
     try {
-      const result = await authService.signupWithGoogle(role, department);
+      const result = await authService.signupWithGoogle(department);
       if (result?.data?.user) {
         toast.success("Account created with Google");
       }
@@ -105,17 +104,6 @@ export default function SignupPage() {
                 placeholder="your@email.com"
                 required
               />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-xs font-semibold text-slate-700 sm:text-sm">
-                Role
-              </label>
-              <select value={role} onChange={(e) => setRole(e.target.value)} className="input-field text-sm">
-                <option value="student">Student</option>
-                <option value="faculty">Faculty</option>
-                <option value="admin">Admin</option>
-              </select>
             </div>
 
             <div>

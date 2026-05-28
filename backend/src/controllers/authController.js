@@ -14,25 +14,19 @@ const getVerifiedIdentity = (req) => ({
   name: req.firebaseUser?.name || req.body?.name,
 });
 
+export const normalizePublicSignupRole = () => "student";
+
 /**
  * Signup - Create user profile after Firebase authentication
  */
 export const signup = async (req, res) => {
   try {
     const identity = getVerifiedIdentity(req);
-    const {
-      role = "student",
-      department,
-      branch,
-      university,
-      semester,
-    } = req.body;
+    const { department, branch, university, semester } = req.body;
     const uid = identity.uid;
     const email = identity.email;
     const name = normalizeString(identity.name, { maxLength: 100 });
-    const normalizedRole = ["student", "faculty", "admin"].includes(role)
-      ? role
-      : "student";
+    const normalizedRole = normalizePublicSignupRole();
     const normalizedDepartment = normalizeString(
       department || branch || "Computer Science",
       { maxLength: 100 },

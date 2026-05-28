@@ -152,11 +152,6 @@ export default function App() {
       setLoading(true);
       try {
         if (firebaseUser) {
-          // Always use a fresh Firebase token here to avoid race conditions
-          // where onAuthStateChanged fires before authService stores localStorage token.
-          const freshToken = await firebaseUser.getIdToken();
-          localStorage.setItem("authToken", freshToken);
-
           // Fetch user profile with smart retry logic
           const fetchProfile = async (retryCount = 0) => {
             try {
@@ -190,8 +185,7 @@ export default function App() {
                   console.warn(
                     "Token rejected. Refreshing token and retrying profile fetch...",
                   );
-                  const refreshedToken = await firebaseUser.getIdToken(true);
-                  localStorage.setItem("authToken", refreshedToken);
+                  await firebaseUser.getIdToken(true);
                   return fetchProfile(retryCount + 1);
                 }
 

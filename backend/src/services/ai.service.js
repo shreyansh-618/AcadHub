@@ -59,19 +59,6 @@ const isQuotaOrRateLimitError = (error) => {
   );
 };
 
-const isModelUnavailableError = (error) => {
-  const message = String(error?.message || "").toLowerCase();
-  return (
-    error?.status === 404 &&
-    (message.includes("not found") || message.includes("not supported"))
-  );
-};
-
-const createTimeout = (ms) =>
-  new Promise((_, reject) =>
-    setTimeout(() => reject(new Error(`Operation timeout after ${ms}ms`)), ms),
-  );
-
 const ensureProviderAvailable = () => {
   if (providerCooldownUntil > Date.now()) {
     throw new AiProviderUnavailableError(

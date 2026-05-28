@@ -15,6 +15,7 @@ export const normalizeString = (value, { maxLength = 5000, trim = true } = {}) =
 
   const normalized = stripControlCharacters(value)
     .replace(/\r/g, "")
+    .replace(/\n{3,}/g, "\n\n")
     .replace(/[ \t]+/g, " ");
 
   const maybeTrimmed = trim ? normalized.trim() : normalized;
@@ -65,3 +66,35 @@ export const safeJsonError = (res, statusCode, code, fallbackMessage, error) =>
 
 export const sanitizeFilename = (value = "") =>
   normalizeString(value, { maxLength: 255, trim: true }).replace(/[<>:"/\\|?*]/g, "_");
+
+const isPlainObject = (value) =>
+  Boolean(value) &&
+  typeof value === "object" &&
+  !Array.isArray(value) &&
+  Object.getPrototypeOf(value) === Object.prototype;
+
+export const findMongoInjectionPath = (value, path = "payload") => {
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index += 1) {
+      const nestedPath = findMongoInjectionPath(value[index], `${path}[${index}]`);
+      if (nestedPath) return nestedPath;
+    }
+
+    return null;
+  }
+
+  if (!isPlainObject(value)) {
+    return null;
+  }
+
+  for (const [key, nestedValue] of Object.entries(value)) {
+    if (key.startsWith("$") || key.includes(".")) {
+      return `${path}.${key}`;
+    }
+
+    const nestedPath = findMongoInjectionPath(nestedValue, `${path}.${key}`);
+    if (nestedPath) return nestedPath;
+  }
+
+  return null;
+};

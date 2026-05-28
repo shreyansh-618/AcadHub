@@ -2,25 +2,7 @@
  * QA Service - Handles all Question Answering API calls
  */
 
-import axios from "axios";
-import { API_ROOT } from "@/services/urlConfig";
-
-// Use the backend API which will forward to AI service
-const qaClient = axios.create({
-  baseURL: API_ROOT,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// Add auth token interceptor
-qaClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem("authToken");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+import { apiClient } from "@/services/api";
 
 /**
  * Ask a question and get an AI-generated answer
@@ -29,7 +11,7 @@ qaClient.interceptors.request.use((config) => {
  * @returns {Promise<Object>} Answer with sources and metadata
  */
 export const askQuestion = async (question, resourceIds = []) => {
-  const response = await qaClient.post("/qa/ask", {
+  const response = await apiClient.post("/qa/ask", {
     question,
     resourceIds,
   });
@@ -42,7 +24,7 @@ export const askQuestion = async (question, resourceIds = []) => {
  * @returns {Promise<Array>} Array of past QA interactions
  */
 export const getUserQAHistory = async (limit = 10) => {
-  const response = await qaClient.get("/qa/history", {
+  const response = await apiClient.get("/qa/history", {
     params: { limit: Math.min(limit, 50) },
   });
   return response.data?.data || response.data;
@@ -55,7 +37,7 @@ export const getUserQAHistory = async (limit = 10) => {
  * @returns {Promise<Object>} Success response
  */
 export const rateAnswer = async (interactionId, rating) => {
-  const response = await qaClient.post("/qa/rate", {
+  const response = await apiClient.post("/qa/rate", {
     questionId: interactionId,
     rating,
   });
@@ -69,7 +51,7 @@ export const rateAnswer = async (interactionId, rating) => {
  */
 export const storeInteraction = async (interaction) => {
   try {
-    const response = await qaClient.post("/qa/store-interaction", {
+    const response = await apiClient.post("/qa/store-interaction", {
       userId: interaction.userId,
       question: interaction.question,
       answer: interaction.answer,

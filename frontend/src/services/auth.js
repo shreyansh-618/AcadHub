@@ -8,9 +8,9 @@ import {
   signInWithPopup,
   onAuthStateChanged,
   setPersistence,
-  browserLocalPersistence,
+  browserSessionPersistence,
 } from 'firebase/auth';
-import { apiClient } from './api';
+import { apiClient, setAuthTokenProvider } from './api';
 
 // Initialize Firebase
 const firebaseConfig = {
@@ -27,7 +27,8 @@ const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
 // Set persistence
-setPersistence(auth, browserLocalPersistence).catch(console.error);
+setPersistence(auth, browserSessionPersistence).catch(console.error);
+setAuthTokenProvider(async () => auth.currentUser?.getIdToken() || null);
 
 export const authService = {
   /**
@@ -37,22 +38,16 @@ export const authService = {
     name,
     email,
     password,
-    role = 'student',
     department = 'Computer Science'
   ) {
     try {
       const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
-
-      // Get ID token
-      const idToken = await firebaseUser.getIdToken();
-      localStorage.setItem('authToken', idToken);
 
       // Create user profile on backend
       const response = await apiClient.post('/auth/signup', {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         name,
-        role,
         department,
       });
 
@@ -65,20 +60,15 @@ export const authService = {
   /**
    * Signup with Google
    */
-  async signupWithGoogle(role = 'student', department = 'Computer Science') {
+  async signupWithGoogle(department = 'Computer Science') {
     try {
       const result = await signInWithPopup(auth, googleProvider);
-
-      // Get ID token
-      const idToken = await result.user.getIdToken();
-      localStorage.setItem('authToken', idToken);
 
       // Create or get user profile on backend
       const response = await apiClient.post('/auth/google', {
         uid: result.user.uid,
         email: result.user.email,
         name: result.user.displayName || 'User',
-        role,
         department,
       });
 
@@ -98,10 +88,6 @@ export const authService = {
     try {
       const { user: firebaseUser } = await signInWithEmailAndPassword(auth, email, password);
 
-      // Get ID token
-      const idToken = await firebaseUser.getIdToken();
-      localStorage.setItem('authToken', idToken);
-
       // Get user profile from backend
       const response = await apiClient.post('/auth/login', {
         uid: firebaseUser.uid,
@@ -119,10 +105,6 @@ export const authService = {
   async loginWithGoogle() {
     try {
       const result = await signInWithPopup(auth, googleProvider);
-
-      // Get ID token
-      const idToken = await result.user.getIdToken();
-      localStorage.setItem('authToken', idToken);
 
       // Get or create user profile on backend
       const response = await apiClient.post('/auth/google', {
@@ -147,7 +129,6 @@ export const authService = {
     try {
       await apiClient.post('/auth/logout');
       await signOut(auth);
-      localStorage.removeItem('authToken');
     } catch (error) {
       throw this.handleError(error);
     }
@@ -183,9 +164,7 @@ export const authService = {
     try {
       const user = await this.getCurrentUser();
       if (user) {
-        const idToken = await user.getIdToken(true);
-        localStorage.setItem('authToken', idToken);
-        return idToken;
+        return user.getIdToken(true);
       }
       return null;
     } catch (error) {
