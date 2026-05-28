@@ -29,7 +29,7 @@ const isValidPassword = (password) => {
  * Validation middleware for signup
  */
 export const validateSignup = (req, res, next) => {
-  const { name, role } = req.body;
+  const { name } = req.body;
 
   const errors = [];
 
@@ -37,10 +37,6 @@ export const validateSignup = (req, res, next) => {
     errors.push(
       "Invalid name: must be a non-empty string (max 100 characters)",
     );
-  }
-
-  if (role && !["student", "faculty", "admin"].includes(role)) {
-    errors.push("Invalid role: must be 'student', 'faculty', or 'admin'");
   }
 
   if (errors.length > 0) {

@@ -43,8 +43,7 @@ function replaceLocalhost(url, host) {
 
 function getApiBaseUrl() {
   if (process.env.EXPO_PUBLIC_API_BASE_URL) {
-    const configuredUrls = process.env.EXPO_PUBLIC_API_BASE_URL
-      .split(",")
+    const configuredUrls = process.env.EXPO_PUBLIC_API_BASE_URL.split(",")
       .map((url) => url.trim())
       .filter(Boolean);
     const localUrl = configuredUrls.find((url) =>

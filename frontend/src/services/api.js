@@ -1,6 +1,12 @@
 import axios from "axios";
 import { API_ROOT } from "./urlConfig";
 
+let authTokenProvider = null;
+
+export const setAuthTokenProvider = (provider) => {
+  authTokenProvider = provider;
+};
+
 class ApiClient {
   constructor() {
     this.client = axios.create({
@@ -12,8 +18,8 @@ class ApiClient {
     });
 
     // Add request interceptor to include auth token
-    this.client.interceptors.request.use((config) => {
-      const token = localStorage.getItem("authToken");
+    this.client.interceptors.request.use(async (config) => {
+      const token = authTokenProvider ? await authTokenProvider() : null;
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -33,8 +39,6 @@ class ApiClient {
         }
 
         if (error.response?.status === 401) {
-          // Handle unauthorized - redirect to login
-          localStorage.removeItem("authToken");
           window.location.href = "/login";
         }
         return Promise.reject(error);
